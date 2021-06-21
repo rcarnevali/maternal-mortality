@@ -257,7 +257,7 @@ Acre;2009;7;0,75
 Amazonas;2009;67;0,08
 Roraima;2009;10;0,11
 Pará;2009;82;0,05
-Amapá;2009;4;0,00
+Amapá;2009;4;0
 Tocantins;2009;22;0,22
 Maranhão;2009;104;0,03
 Piauí;2009;44;0,16
@@ -265,12 +265,12 @@ Ceará;2009;87;0,53
 Rio Grande do Norte;2009;25;0,09
 Paraíba;2009;33;0,14
 Pernambuco;2009;88;0,42
-Alagoas;2009;19;0,90
+Alagoas;2009;19;0,9
 Sergipe;2009;36;0,16
 Bahia;2009;195;0,18
 Minas Gerais;2009;109;0,11
 Espírito Santo;2009;44;0,26
-Rio de Janeiro;2009;203;0,80
+Rio de Janeiro;2009;203;0,8
 São Paulo;2009;339;0,38
 Paraná;2009;107;0,39
 Santa Catarina;2009;19;-0,05
@@ -279,17 +279,17 @@ Mato Grosso do Sul;2009;36;-0,05
 Mato Grosso;2009;35;0,13
 Goiás;2009;41;0,24
 Distrito Federal;2009;24;0,09
-Brasil;2010;1719;0,20
-Rondônia;2010;16;0,00
-Acre;2010;6;0,00
+Brasil;2010;1719;0,2
+Rondônia;2010;16;0
+Acre;2010;6;0
 Amazonas;2010;70;0,06
-Roraima;2010;1;0,00
+Roraima;2010;1;0
 Pará;2010;78;0,07
-Amapá;2010;3;0,00
+Amapá;2010;3;0
 Tocantins;2010;18;0,29
 Maranhão;2010;123;0,03
 Piauí;2010;47;0,02
-Ceará;2010;91;0,60
+Ceará;2010;91;0,6
 Rio Grande do Norte;2010;16;0,23
 Paraíba;2010;29;0,07
 Pernambuco;2010;76;0,21
@@ -301,19 +301,19 @@ Espírito Santo;2010;34;0,55
 Rio de Janeiro;2010;180;0,61
 São Paulo;2010;271;0,27
 Paraná;2010;90;0,22
-Santa Catarina;2010;24;0,00
+Santa Catarina;2010;24;0
 Rio Grande do Sul;2010;79;0,05
 Mato Grosso do Sul;2010;30;-0,12
 Mato Grosso;2010;35;0,25
 Goiás;2010;47;0,04
-Distrito Federal;2010;20;0,00
+Distrito Federal;2010;20;0
 Brasil;2011;1610;0,24
 Rondônia;2011;15;0,25
-Acre;2011;6;0,50
+Acre;2011;6;0,5
 Amazonas;2011;52;0,08
-Roraima;2011;6;0,20
+Roraima;2011;6;0,2
 Pará;2011;85;0,09
-Amapá;2011;6;0,00
+Amapá;2011;6;0
 Tocantins;2011;26;0,24
 Maranhão;2011;105;0,06
 Piauí;2011;45;0,13
@@ -327,30 +327,30 @@ Bahia;2011;149;0,16
 Minas Gerais;2011;95;0,22
 Espírito Santo;2011;32;0,33
 Rio de Janeiro;2011;164;0,69
-São Paulo;2011;249;0,30
+São Paulo;2011;249;0,3
 Paraná;2011;79;0,32
-Santa Catarina;2011;22;0,10
+Santa Catarina;2011;22;0,1
 Rio Grande do Sul;2011;67;0,08
-Mato Grosso do Sul;2011;29;0,00
+Mato Grosso do Sul;2011;29;0
 Mato Grosso;2011;34;0,06
 Goiás;2011;37;0,09
 Distrito Federal;2011;19;-0,05
 Brasil;2012;1583;0,27
 Rondônia;2012;17;0,55
-Acre;2012;9;0,80
+Acre;2012;9;0,8
 Amazonas;2012;50;0,02
 Roraima;2012;4;0,33
 Pará;2012;94;0,16
-Amapá;2012;6;0,00
+Amapá;2012;6;0
 Tocantins;2012;13;0,44
 Maranhão;2012;84;0,01
 Piauí;2012;48;0,07
-Ceará;2012;88;0,40
+Ceará;2012;88;0,4
 Rio Grande do Norte;2012;31;0,55
 Paraíba;2012;27;0,04
 Pernambuco;2012;73;0,24
 Alagoas;2012;24;0,09
-Sergipe;2012;24;0,50
+Sergipe;2012;24;0,5
 Bahia;2012;147;0,39
 Minas Gerais;2012;88;0,24
 Espírito Santo;2012;34;0,36
@@ -361,15 +361,15 @@ Santa Catarina;2012;32;0,07
 Rio Grande do Sul;2012;92;0,14
 Mato Grosso do Sul;2012;29;0,26
 Mato Grosso;2012;30;0,36
-Goiás;2012;54;0,10
+Goiás;2012;54;0,1
 Distrito Federal;2012;19;0,19
 Brasil;2013;1686;0,31
 Rondônia;2013;18;-0,05
 Acre;2013;10;0,67
 Amazonas;2013;50;0,04
-Roraima;2013;6;0,00
+Roraima;2013;6;0
 Pará;2013;120;0,33
-Amapá;2013;14;0,00
+Amapá;2013;14;0
 Tocantins;2013;14;0,27
 Maranhão;2013;111;0,05
 Piauí;2013;44;-0,02
@@ -390,19 +390,19 @@ Rio Grande do Sul;2013;44;0,22
 Mato Grosso do Sul;2013;22;0,05
 Mato Grosso;2013;38;0,46
 Goiás;2013;49;0,23
-Distrito Federal;2013;24;0,20
+Distrito Federal;2013;24;0,2
 Brasil;2014;1739;0,25
 Rondônia;2014;22;0,22
-Acre;2014;8;0,60
+Acre;2014;8;0,6
 Amazonas;2014;78;0,07
-Roraima;2014;5;0,00
+Roraima;2014;5;0
 Pará;2014;117;0,14
-Amapá;2014;8;0,00
-Tocantins;2014;15;0,50
+Amapá;2014;8;0
+Tocantins;2014;15;0,5
 Maranhão;2014;93;0,06
 Piauí;2014;33;0,06
 Ceará;2014;84;0,42
-Rio Grande do Norte;2014;36;0,50
+Rio Grande do Norte;2014;36;0,5
 Paraíba;2014;31;0,15
 Pernambuco;2014;91;0,42
 Alagoas;2014;54;0,54
@@ -415,7 +415,7 @@ São Paulo;2014;263;0,28
 Paraná;2014;66;0,38
 Santa Catarina;2014;24;0,14
 Rio Grande do Sul;2014;59;0,11
-Mato Grosso do Sul;2014;26;0,00
+Mato Grosso do Sul;2014;26;0
 Mato Grosso;2014;36;0,57
 Goiás;2014;51;0,28
 Distrito Federal;2014;20;0,18
@@ -425,24 +425,24 @@ Acre;2015;10;0,43
 Amazonas;2015;52;0,11
 Roraima;2015;11;0,83
 Pará;2015;95;0,22
-Amapá;2015;13;0,00
+Amapá;2015;13;0
 Tocantins;2015;19;0,19
 Maranhão;2015;117;0,15
 Piauí;2015;41;0,08
 Ceará;2015;65;0,67
-Rio Grande do Norte;2015;30;0,20
+Rio Grande do Norte;2015;30;0,2
 Paraíba;2015;38;0,06
 Pernambuco;2015;98;0,48
-Alagoas;2015;30;0,30
-Sergipe;2015;18;0,50
+Alagoas;2015;30;0,3
+Sergipe;2015;18;0,5
 Bahia;2015;143;0,23
 Minas Gerais;2015;125;0,33
 Espírito Santo;2015;36;0,16
 Rio de Janeiro;2015;159;0,57
-São Paulo;2015;311;0,30
+São Paulo;2015;311;0,3
 Paraná;2015;83;0,34
 Santa Catarina;2015;30;0,36
-Rio Grande do Sul;2015;53;0,10
+Rio Grande do Sul;2015;53;0,1
 Mato Grosso do Sul;2015;31;0,07
 Mato Grosso;2015;43;0,23
 Goiás;2015;57;0,39
@@ -531,3 +531,31 @@ Mato Grosso do Sul;2018;29;
 Mato Grosso;2018;34;
 Goiás;2018;64;
 Distrito Federal;2018;24;
+Brasil;2019;1576;
+Rondônia;2019;13;
+Acre;2019;8;
+Amazonas;2019;60;
+Roraima;2019;11;
+Pará;2019;121;
+Amapá;2019;5;
+Tocantins;2019;15;
+Maranhão;2019;85;
+Piauí;2019;41;
+Ceará;2019;75;
+Rio Grande do Norte;2019;31;
+Paraíba;2019;36;
+Pernambuco;2019;64;
+Alagoas;2019;29;
+Sergipe;2019;12;
+Bahia;2019;105;
+Minas Gerais;2019;115;
+Espírito Santo;2019;29;
+Rio de Janeiro;2019;155;
+São Paulo;2019;283;
+Paraná;2019;68;
+Santa Catarina;2019;30;
+Rio Grande do Sul;2019;49;
+Mato Grosso do Sul;2019;22;
+Mato Grosso;2019;38;
+Goiás;2019;67;
+Distrito Federal;2019;9;
