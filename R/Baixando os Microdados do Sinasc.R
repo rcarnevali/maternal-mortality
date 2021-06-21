@@ -7,6 +7,8 @@ library(tidyverse)
 library(read.dbc)
 library(foreign)
 library(naniar)
+library(purrr)
+library(gt)
 
 ##----------------------------------------------------------------------------------------------------------
 
@@ -179,9 +181,9 @@ sinasc <- sinasc %>%
 #assign(paste("sinasc", ano, sep = "."), sinasc, envir = .GlobalEnv)
 
 ## Visualizando a distribuição de NAs
-library(VIM)
-library(Amelia)
-library(mice)
+# library(VIM)
+# library(Amelia)
+# library(mice)
 
 # sinasc %>%
 #   mutate(QTDFILTIDOS = QTDFILVIVO + QTDFILMORT,
@@ -193,8 +195,6 @@ library(mice)
 #             munResArea, CODMUNRES, DTNASC, IdadeReprod, LOCNASC, sigla)) %>%
 #   group_by(Estado) %>%
 #   md.pattern()
-
-library(gt)
 
 sinasc_2018 <- sinasc %>%
   mutate(QTDFILTIDOS = QTDFILVIVO + QTDFILMORT,
@@ -210,7 +210,6 @@ sinasc_2018 <- sinasc %>%
   select(!n_miss) %>%
   rename(pct_miss_2018 = pct_miss)
 
-library(purrr)
 sinasc <- list(sinasc_2000, sinasc_2003, sinasc_2006, sinasc_2009, sinasc_2012, sinasc_2015, sinasc_2018) %>% 
   reduce(left_join, by = c("Estado", "variable"))
 
@@ -235,7 +234,7 @@ tabela <- sinasc %>%
   gt() %>%
   tab_header(
     title = md("**Porcentagem de Missing na Informação de Filhos Tidos - SINASC**"),
-    subtitle = md("Filhos Tidos = Missing em 'QTD Filhos Vivos' OU em 'QTD Filhos Mortos'")) %>%
+    subtitle = md("Filhos Tidos = Missing em 'QTD Filhos Vivos' OU Missing em 'QTD Filhos Mortos'")) %>%
   fmt_percent(columns = c(pct_miss_2000, pct_miss_2003, pct_miss_2006, pct_miss_2009, pct_miss_2012, pct_miss_2015, pct_miss_2018),
               decimals = 2) %>%
   tab_spanner(label = "Ano",
@@ -246,4 +245,9 @@ tabela <- sinasc %>%
              pct_miss_2009 = "2009",
              pct_miss_2012 = "2012",
              pct_miss_2015 = "2015",
-             pct_miss_2018 = "2018")
+             pct_miss_2018 = "2018") %>%
+  tab_footnote(footnote = "Os valores são as % referentes ao total de observações para cada UF para cada ano",
+    locations = cells_title(groups = "subtitle"))
+
+tabela %>%
+  gtsave("tab_NA_filhostidos.html", inline_css = TRUE)
