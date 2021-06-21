@@ -245,7 +245,7 @@ rm(Gompertz.sem.P, novo, data, Total.2000.2019)
 
 ################################
 ## 2) GRAFICO comparativo de pontos das razoes de diferencas (FATOR DE CORRECAO) entre a TFT e os metodos
-TFT.2000.2019 %>%
+Razao.TFT.BR.2010 <- TFT.2000.2019 %>%
   filter(Ano == 2010) %>%
   arrange(Estado) %>%
   mutate(region = case_when(11 <= Estado & Estado <= 17 ~ "Norte",
@@ -316,11 +316,13 @@ TFT.2000.2019 %>%
   geom_text(x = 1.022, y = 30.5, label = 'Gompertz sem Parturição', size = 3.8,
             hjust = 'left', color = 'black')
 
+ggsave(Razao.TFT.BR.2010, file = paste0("Razao.TFT.BR.2010.png"),
+       dpi = 500, height = 9, width = 9, unit = 'in', scale = 1)
 ##----------------------------------------------------------------------------------------------------------
 
 ## 3)GRAFICO TFT Brasil 2000-2019
 
-TFT.2000.2019 %>%
+TFT.BR.00.19 <- TFT.2000.2019 %>%
   filter(Estado == 99) %>%
   ggplot(aes(x = Ano)) + 
   geom_point(aes(y = TFT,  color = "TFT"), size = 2) + 
@@ -343,6 +345,9 @@ TFT.2000.2019 %>%
         axis.text.y = element_text(size = 11),
         axis.text.x = element_text(angle = 50, hjust = 1, size = 11))
 
+ggsave(TFT.BR.00.19, file = paste0("TFT.BR.00.19.png"),
+       dpi = 500, height = 9, width = 9, unit = 'in', scale = 1)
+
 ##----------------------------------------------------------------------------------------------------------
 
 # Adicionando o Banco de Obitos Maternos
@@ -363,7 +368,7 @@ TFT.2000.2019 <- TFT.2000.2019 %>%
 ################################
 ## 2) GRAFICO - RMM Brasil 2000-2019 - Comparação OBS e Gompertz sem Parturicao
 
-TFT.2000.2019 %>%
+RMM.BR.00.19 <- TFT.2000.2019 %>%
   filter(Estado == 99) %>%
   ggplot(aes(x = Ano, y = RMM) ) + 
   geom_point(shape = 'O', size = 6, color = '#5A4956', alpha = 1.50) +
@@ -393,3 +398,5 @@ TFT.2000.2019 %>%
   geom_point(aes(x = 2000, y = 43), shape = 16, size = 4.5, col = "#d45e79", alpha = 0.90) +
   geom_text(x = 2001, y = 43, label = 'Gompertz sem Parturição', size = 3.8, hjust = 'left', color = 'black')
 
+ggsave(RMM.BR.00.19, file = paste0("RMM.BR.00.19.png"),
+       dpi = 500, height = 9, width = 9, unit = 'in', scale = 1)

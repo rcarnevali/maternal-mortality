@@ -306,7 +306,7 @@ for (i in Estados) {
   # dev.off()
 }
 
-## TABELA Raz?o Total Filhos Tidos no ?ltimo ano
+## TABELA Razao Total Filhos Tidos no ultimo ano
 
 # webshot::install_phantomjs()
 
