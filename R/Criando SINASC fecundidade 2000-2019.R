@@ -236,3 +236,9 @@ fecundidade.2011.2019 <- fecundidade.2011.2019 %>%
          ASFR = Filhos.tidos.no.ultimo.ano/Mulheres) %>% 
   filter(idade >=  15,
          idade <= 45)
+
+
+fecundidade.2000.2019 <- rbind(fecundidade.2000.2010, fecundidade.2011.2019)
+
+rm(fecundidade.2000.2010, fecundidade.2011.2019)
+  
