@@ -272,7 +272,7 @@ for (i in Estados) {
     geom_path(aes(y = Filhos.tidos.no.ultimo.ano,  color = "Censo"), linetype = "solid", size = 1.2) + 
     geom_path(aes(y =  SINASC, color = "Sinasc"), linetype = "twodash", size = 1.2) +
     labs(title = paste("Filhos Tidos nos ?ltimos 12 Meses", i, "- 2000 e 2010 - Censo e SINASC", sep = " "),
-         caption = "Fonte: IBGE - Censo Demogr?fico 2000 e 2010 e SINASC 2000 e 2010",
+         caption = "Fonte: IBGE - Censo Demografico 2000 e 2010 e SINASC 2000 e 2010",
          y = "",
          color = "Fonte") + 
     theme_bw() +
@@ -322,12 +322,12 @@ tab_1 <- Filhos.tidos %>%
   select(UF, Ratio) %>%
   gt() %>%
   fmt_number(columns = c(Ratio), decimals = 3) %>%
-  cols_label(Ratio = "Raz?o Censo/Sinasc",
-             UF = "Unidade da Federa??o") %>%
+  cols_label(Ratio = "Razao Censo/Sinasc",
+             UF = "Unidade da Federacao") %>%
   tab_header(
-    title = md("**Raz?o Censo/Sinasc Filhos Tidos no ?ltimo Ano - 2000**"),
+    title = md("**Razao Censo/Sinasc Filhos Tidos no último Ano - 2000**"),
     subtitle = "Brasil e UFs") %>%
-  tab_source_note(md("Fonte: IBGE - Censo Demogr?fico 2000 e 2010 e SINASC 2000 e 2010"))  %>%
+  tab_source_note(md("Fonte: IBGE - Censo Demografico 2000 e 2010 e SINASC 2000 e 2010"))  %>%
   tab_style(
     style = cell_fill(color = "#d8f3dc"),
     locations = cells_body(rows = Ratio > 1)) %>%
@@ -335,7 +335,7 @@ tab_1 <- Filhos.tidos %>%
     style = cell_fill(color = "#fbc4ab"),
     locations = cells_body(rows =  Ratio < 1))
 
-tab_1 %>% gt::gtsave("Tabela Raz?o Censo/Sinasc Filhos Tidos 12 meses - 2000.png", #path = "~", 
+tab_1 %>% gt::gtsave("Tabela Razão Censo/Sinasc Filhos Tidos 12 meses - 2000.png", #path = "~", 
                      zoom = 10.5, expand = 60)
 
 
@@ -363,9 +363,9 @@ Filhos.tidos.wide %>%
   scale_y_continuous(breaks = NULL, limits = c(1, 33)) +
   scale_x_continuous(breaks = seq(0.7, 1.5, by = 0.15), limits = c(0.57, 1.46)) +
   theme_bw() +
-  labs(x = 'Raz?o Censo/Sinasc Filhos Tidos no ?ltimo Ano - 2000 e 2010', 
+  labs(x = 'Raz?o Censo/Sinasc Filhos Tidos no último Ano - 2000 e 2010', 
        y = '',
-       caption = "Fonte: IBGE - Censo Demogr?fico 2000 e 2010 e SINASC 2000 e 2010")  +
+       caption = "Fonte: IBGE - Censo Demografico 2000 e 2010 e SINASC 2000 e 2010")  +
   geom_segment(aes(x = ratio_2000, xend = ratio_2010, y = index, yend = index), color = 'darkgrey') +
   geom_text(aes(x = ratio_2010, y = index, label = sigla), color = 'black', size = 4, fontface = 'bold') +
   theme(axis.text = element_text(size = 12, face = 'bold', color = 'black'),
@@ -446,7 +446,7 @@ for (i in Estados) {
     geom_path(aes(y = ASFR,  color = "Censo"), linetype = "solid", size = 1.2) + 
     geom_path(aes(y =  ASFR.Sinasc, color = "Sinasc"), linetype = "twodash", size = 1.2) +
     labs(title = paste ("Taxa Espec?fica de Fecundidade", i, "- 2000 e 2010 - Censo e SINASC", sep = " "),
-         caption = "Fonte: IBGE - Censo Demogr?fico 2000 e 2010 e SINASC 2000 e 2010",
+         caption = "Fonte: IBGE - Censo Demografico 2000 e 2010 e SINASC 2000 e 2010",
          y = "TEF") + 
     theme_bw() +
     scale_color_manual(name = "Fonte:",  values = c("#D56062", "#0F5257")) +
@@ -613,7 +613,7 @@ for (i in Estados) {
     #geom_path(aes(y = Coale.Trussel, color = "Coale & Trussel"), linetype = "dashed", size = 1.2) +
     geom_path(aes(y = ASFR.Sinasc, color = "SINASC"), linetype = "solid", size = 1.2) +
     labs(title = "Taxa Espec?fica de Fecundidade - Brasil 2000 e 2010",
-         caption = "Fonte: IBGE - Censo Demogr?fico 2000 e 2010",
+         caption = "Fonte: IBGE - Censo Demografico 2000 e 2010",
          y = "TEF",
          color = "Metodos") +
     theme_bw() +
@@ -753,7 +753,7 @@ TFT.2000.2010 %>%
   theme_bw() +
   labs(x = 'Compara??o Estima??o TFT Censo, Sinasc e M?todos(Censo)', 
        y = '',
-       caption = "Fonte: IBGE - Censo Demogr?fico 2000 e 2010 e SINASC 2000 e 2010") +
+       caption = "Fonte: IBGE - Censo Demografico 2000 e 2010 e SINASC 2000 e 2010") +
   geom_segment(aes(x = Censo, xend = Gompertz, y = index, yend = index), color = 'darkgrey') +
   geom_text(aes(x = Brass, y = index, label = sigla), color = 'black', size = 4, fontface = 'bold') +
   theme(axis.text = element_text(size = 12, face = 'bold', color = 'black'),
