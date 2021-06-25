@@ -1,0 +1,36 @@
+name;description
+RMM;Estimada com os dados do Ministério da Saúde
+TBN;Crude Birth Rate
+r;Annual population growth rate
+P_hat;2019 estimated population assuming constant annual growth rate from 2009-2014
+B_hat;Projected births in 2019 assuming constant fertility
+B;Actual births in 2019
+D1_hat;No change in CBR and no change in MMR
+D2_hat;CBR declined but MMR did not
+D3_hat;MMR declined but CBR did not
+D;Both CBR and MMR declined
+X;Total effect of fertility decline
+Y;Total effect of decline in MMR
+Z;Total effect of declines in both fertility and MMR
+intersec.X.Y;Overlap between the effect of declines in fertility and in MMR
+Alpha;Net effect of decline in MMR
+Beta;Net effect of fertility decline
+Gama;Effect of safe motherhood on the % of the  potential number of maternal lives saved in 2019
+Delta;Effect of decrease in live births on the % of the  potential number of maternal lives saved in 2019
+Omega;Effect of fertility reduction realized through its effect on MMR reduction
+RMM_hat;MMR in 2019 implied by fertility reduction observed during 2009-2019
+D.09;Maternal deaths in 2009
+D.19;Maternal deaths in 2019
+D_hat.19;Maternal deaths in 2019 implied by fertility decline observed between 2009 and 2019
+Iota;Total decline in MMR between 2009 and 2019
+Kappa;Decline in MMR attributable to fertility reduction
+Lambda;Decline in MMR attributable to safe motherhood initiatives
+Iota.per;Total decline in MMR between 2009 and 2019
+Kappa.per;Decline in MMR attributable to fertility reduction (in %)
+Lambda.per;Decline in MMR attributable to safe motherhood initiatives (in %)
+Sigma;Total decline in actual maternal deaths between 2009 and 2019
+Tau;Attributable to fertility decline
+Eta;Attributable to safe motherhood
+Sigma.per;Total decline in actual maternal deaths between 2009 and 2019 (in %)
+Tau.per;Attributable to fertility decline (in %)
+Eta.per;Attributable to safe motherhood (in %)

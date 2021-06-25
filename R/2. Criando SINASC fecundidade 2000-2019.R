@@ -1,8 +1,8 @@
 # Criando as bases de fecundidade Sinasc 2000-2019
   # Fonte: Nascimentos Sinasc & Mulheres DataSUS (2000-2009) e Projeções IBGE (2010-2019) 
-
 # Author: Rafaella Carnevali
 # Build under R version 4.1.0
+
 options(scipen = 9999)
 
 ## Pacotes

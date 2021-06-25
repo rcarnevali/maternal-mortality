@@ -1,6 +1,6 @@
 # Estimacao da RMM e TFTs para Brasil e UFs 2010-2018
 # Author: Rafaella Carnevali
-# Build under R version 4.0.3
+# Build under R version 4.1.0
 
 options(scipen = 9999)
 
@@ -29,6 +29,7 @@ library(fertestr)
 
 ## Importando os dados
 Obitos.maternos2000.2019 <- read.csv('data/Prop Obitos Maternos 2000-2019.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
+RMM.ibge.09.18 <- read.csv('data/RMM IBGE 2009-2018.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
 
 ##----------------------------------------------------------------------------------------------------------
 
@@ -120,11 +121,47 @@ Obitos.maternos2000.2019 <- Obitos.maternos2000.2019 %>%
                            UF == "Brasil" ~ "BR")) %>%
   arrange(Estado, Ano)
 
+################################
+## 2) RMM extraidas do sistema de vigilância (2009-2018) ##
+
+RMM.ibge.09.18 <- RMM.ibge.09.18 %>%
+  rename(UF = Estados) %>%
+  mutate(Estado = case_when(UF == "Rondônia" ~ 11,
+                            UF == "Acre" ~ 12,
+                            UF == "Amazonas" ~ 13,
+                            UF == "Roraima" ~ 14,
+                            UF == "Pará" ~ 15,
+                            UF == "Amapá" ~ 16,
+                            UF == "Tocantins" ~ 17,
+                            UF == "Maranhão" ~ 21,
+                            UF == "Piauí" ~ 22,
+                            UF == "Ceará" ~ 23,
+                            UF == "Rio Grande do Norte" ~ 24,
+                            UF == "Paraíba" ~ 25,
+                            UF == "Pernambuco" ~ 26,
+                            UF == "Alagoas" ~ 27,
+                            UF == "Sergipe" ~ 28,
+                            UF == "Bahia" ~ 29,
+                            UF == "Minas Gerais" ~ 31,
+                            UF == "Espírito Santo" ~ 32,
+                            UF == "Rio de Janeiro" ~ 33,
+                            UF == "São Paulo" ~ 35,
+                            UF == "Paraná" ~ 41 ,
+                            UF == "Santa Catarina" ~ 42,
+                            UF == "Rio Grande do Sul" ~ 43,
+                            UF == "Mato Grosso do Sul" ~ 50,
+                            UF == "Mato Grosso" ~ 51,
+                            UF == "Goiás" ~ 52,
+                            UF == "Distrito Federal" ~ 53,
+                            UF == "Brasil" ~ 99)) %>%
+  pivot_longer(!c(Estado, UF), names_to = "var", values_to = "RMM.Ibge") %>%
+  mutate(Ano = rep(seq(2009, 2018, by = 1), 28)) %>%
+  select(!var)
+
 ##----------------------------------------------------------------------------------------------------------
 
 ## Calculando a TEF por diferentes métodos para UFs
 
-################################
 ## 1) Gompertz ##
 novo <- NULL
 TEF.2000.2019 <- NULL
@@ -400,3 +437,67 @@ RMM.BR.00.19 <- TFT.2000.2019 %>%
 
 ggsave(RMM.BR.00.19, file = paste0("RMM.BR.00.19.png"),
        dpi = 500, height = 9, width = 9, unit = 'in', scale = 1)
+
+################################
+## 3) Juntando as RMMs Geradas com as calculadas pelo IBGE e usando a razões para criar RMM.Ibge(2019) ##
+
+TFT.2000.2019 <- TFT.2000.2019 %>%
+  left_join(RMM.ibge.09.18, by = c("Estado", "UF", "Ano")) %>%
+  mutate(ratio = RMM.Ibge/RMM) %>%
+  group_by(UF) %>%
+  mutate( 
+    across("RMM.Ibge", ~(
+      function(x) {
+        for(i in 1:length(x))
+        {
+          if(is.na(x[i]) & Ano[i] > 2018)
+            x[i] <- ratio[Ano == 2018] * RMM[Ano == 2018]
+          
+          else if(is.na(x[i]) & Ano[i] < 2018)
+            x[i] <- x[i]
+          
+        }
+        return(x)
+      } ) # end of function spec
+      (.) ) # end of across spec
+  ) %>% # end of mutate
+  ungroup() %>%
+  select(-ratio)
+
+
+################################
+## 4) GRAFICO - RMM Brasil 2000-2019 - Comparação RMMs Geradas com as calculadas pelo IBGE
+
+TFT.2000.2019 %>%
+  left_join(RMM.ibge.09.18, by = c("Estado", "UF", "Ano")) %>%
+  filter(Estado == 99) %>%
+  ggplot(aes(x = Ano, y = RMM) ) + 
+  geom_point(shape = 'O', size = 6, color = '#5A4956', alpha = 1.50) +
+  geom_point(aes(x = Ano, y = RMM.Obt.Corr), shape = 16, size = 5, col = "#9799ca", alpha = 0.90) +
+  geom_point(aes(x = Ano, y = RMM.Gompertz.sem.P), shape = 16, size = 5, col = "#d45e79", alpha = 0.90) +
+  geom_point(aes(x = Ano, y = RMM.Ibge), shape = 16, size = 5, col = "#1d3557", alpha = 0.80) +
+  scale_x_continuous(name = "Ano", breaks = seq(2000, 2019, by = 1)) +
+  scale_y_continuous(name ="RMM", breaks = seq(43, 69, by = 5), limits = c(43, 69)) +
+  theme_bw() +
+  labs(title = "RMM Observada e Ajustada - Brasil 2000-2019",
+       x = 'Ano', 
+       y = 'RMM',
+       caption = "Fonte: SINASC 2011-2019; SIM 2000-2019; Projecoes IBGE 2018") +
+  theme(legend.position = "bottom",
+        legend.direction = "horizontal",
+        legend.spacing.x = grid::unit(0.15, "cm"),
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(color = "grey20", size = 12, hjust = 0.5, face = "bold"), 
+        legend.title = element_text(size = 11, face = "bold"),
+        legend.text = element_text(size = 11),
+        #axis.title = element_text(size = 12),
+        axis.text.y = element_text(size = 11),
+        axis.text.x = element_text(angle = 50, hjust = 1, size = 11)) +
+  geom_point(aes(x = 2000, y = 47.5), shape = 16, size = 4.5, col = "#1d3557", alpha = 0.70) +
+  geom_text(x = 2001, y = 47.5, label = 'Estimativa IBGE', size = 3.8, hjust = 'left', color = 'black') +
+  geom_point(aes(x = 2000, y = 46), shape = 16, size = 5, color = '#9799ca', alpha = 0.80) +
+  geom_text(x = 2001, y = 46, label = 'RMM Obitos Ajustados', size = 3.8, hjust = 'left', color = 'black') +
+  geom_point(aes(x = 2000, y = 44.5), shape = 'O', size = 5, color = '#5A4956', alpha = 0.80) +
+  geom_text(x = 2001, y = 44.5, label = 'RMM Observada', size = 3.8, hjust = 'left', color = 'black') +
+  geom_point(aes(x = 2000, y = 43), shape = 16, size = 4.5, col = "#d45e79", alpha = 0.90) +
+  geom_text(x = 2001, y = 43, label = 'Gompertz sem Parturição', size = 3.8, hjust = 'left', color = 'black')

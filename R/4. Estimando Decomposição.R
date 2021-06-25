@@ -1,12 +1,13 @@
 ### Decomposição da MMR ###
 # Author: Rafaella Carnevali
-# Build under R version 4.0.3
+# Build under R version 4.1.0
+
 options(scipen = 9999)
 
 ## Pacotes
 .packages = c("devtools", "stringr", "foreign", "Hmisc",
               "scales", "zoo", "janitor", "ggplot2", "tidyr",
-              "dplyr", "data.table")
+              "dplyr", "data.table", "gt")
 
 # Install CRAN packages (if not already installed)
 .inst <- .packages %in% installed.packages()
@@ -16,171 +17,31 @@ if(length(.packages[!.inst]) > 0)
 # Load packages into session
 lapply(.packages, require, character.only = T)
 
-devtools::install_github("josehcms/fertestr")
+#devtools::install_github("josehcms/fertestr")
 library(fertestr)
 
 ##----------------------------------------------------------------------------------------------------------
+## ATENCAO
 
-## Importando dados de Populacao
-fecundidade2000.2010 <- read.csv('data/Fecundidade 2000-2010 Censo.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
-fecundidade2011.2018 <- read.csv('data/Fecundidade 2011-2018 Sinasc.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
-Obitos.maternos2000.2018 <- read.csv('data/Prop Obitos Maternos 2000-2018.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
-BR.Pop <- read.csv('data/Pop BR 00, 10 e 18.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
+# Para obter os dados de fecundidade usados neste script, primeiro rode o "Criando SINASC fecundidade 2000-2019.R"
+
+##----------------------------------------------------------------------------------------------------------
+
+## Importando os dados
+Pop.00.30 <- read.csv('data/Pop 00-30.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
+Obitos.maternos2000.2019 <- read.csv('data/Prop Obitos Maternos 2000-2019.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
+Fec.proj.20.40 <- read.csv('data/Projecao Fec 2020-2040.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
+RMM.ibge.09.18 <- read.csv('data/RMM IBGE 2009-2018.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
+description <- read.csv('data/description decomp.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
 
 ##----------------------------------------------------------------------------------------------------------
 
 ## Organizando o Banco de Dados
 
-################################
-## 1) Censos 2000 e 2010 - Fecundidade idade 15-45 ##
-fecundidade2000.2010 <- fecundidade2000.2010 %>%
-  mutate(Estado = case_when(UF == "Rondônia" ~ 11,
-                            UF == "Acre" ~ 12,
-                            UF == "Amazonas" ~ 13,
-                            UF == "Roraima" ~ 14,
-                            UF == "Pará" ~ 15,
-                            UF == "Amapá" ~ 16,
-                            UF == "Tocantins" ~ 17,
-                            UF == "Maranhão" ~ 21,
-                            UF == "Piauí" ~ 22,
-                            UF == "Ceará" ~ 23,
-                            UF == "Rio Grande do Norte" ~ 24,
-                            UF == "Paraíba" ~ 25,
-                            UF == "Pernambuco" ~ 26,
-                            UF == "Alagoas" ~ 27,
-                            UF == "Sergipe" ~ 28,
-                            UF == "Bahia" ~ 29,
-                            UF == "Minas Gerais" ~ 31,
-                            UF == "Espírito Santo" ~ 32,
-                            UF == "Rio de Janeiro" ~ 33,
-                            UF == "São Paulo" ~ 35,
-                            UF == "Paraná" ~ 41 ,
-                            UF == "Santa Catarina" ~ 42,
-                            UF == "Rio Grande do Sul" ~ 43,
-                            UF == "Mato Grosso do Sul" ~ 50,
-                            UF == "Mato Grosso" ~ 51,
-                            UF == "Goiás" ~ 52,
-                            UF == "Distrito Federal" ~ 53,
-                            UF == "Brasil" ~ 99),
-         region = case_when(11 <= Estado & Estado <= 17 ~ "Norte",
-                            21 <= Estado & Estado <= 29 ~ "Nordeste",
-                            (31 <= Estado & Estado <= 33) | Estado == 35 ~ "Sudeste",
-                            41 <= Estado & Estado <= 43 ~ "Sul",
-                            50 <= Estado & Estado <= 53 ~ "Centro-Oeste",
-                            Estado > 55 ~ "Brasil"),
-         sigla = case_when(UF == "Rondônia" ~ "RO",
-                           UF == "Acre" ~ "AC",
-                           UF == "Amazonas" ~ "AM",
-                           UF == "Roraima" ~ "RR",
-                           UF == "Pará" ~ "PA",
-                           UF == "Amapá" ~ "AP",
-                           UF == "Tocantins" ~ "TO",
-                           UF == "Maranhão" ~ "MA",
-                           UF == "Piauí" ~ "PI",
-                           UF == "Ceará" ~ "CE",
-                           UF == "Rio Grande do Norte" ~ "RN",
-                           UF == "Paraíba" ~ "PB",
-                           UF == "Pernambuco" ~ "PE",
-                           UF == "Alagoas" ~ "AL",
-                           UF == "Sergipe" ~ "SE",
-                           UF == "Bahia" ~ "BA",
-                           UF == "Minas Gerais" ~ "MG",
-                           UF == "Espírito Santo" ~ "ES",
-                           UF == "Rio de Janeiro" ~ "RJ",
-                           UF == "São Paulo" ~ "SP",
-                           UF == "Paraná" ~ "PR",
-                           UF == "Santa Catarina" ~ "SC",
-                           UF == "Rio Grande do Sul" ~ "RS",
-                           UF == "Mato Grosso do Sul" ~ "MS",
-                           UF == "Mato Grosso" ~ "MT",
-                           UF == "Goiás" ~ "GO",
-                           UF == "Distrito Federal" ~ "DF",
-                           UF == "Brasil" ~ "BR"),
-         idade = as.numeric(substr(Grupos.de.idade, start = 1, stop = 2)),
-         Parity = Filhos.Tidos.Nascidos.Vivos/Mulheres,
-         ASFR = Filhos.tidos.no.ultimo.ano/Mulheres) %>%
-  filter(idade >=  15,
-         idade <= 45)
-
-################################
-
-## 2) SINASC - Fecundidade idade 15-45 ##
-fecundidade2011.2018 <- fecundidade2011.2018 %>%
-  rename (Grupos.de.idade = Idade) %>%
-  mutate(Filhos.tidos.no.ultimo.ano = round(Filhos.tidos.no.ultimo.ano),
-         Estado = case_when(UF == "Rondônia" ~ 11,
-                            UF == "Acre" ~ 12,
-                            UF == "Amazonas" ~ 13,
-                            UF == "Roraima" ~ 14,
-                            UF == "Pará" ~ 15,
-                            UF == "Amapá" ~ 16,
-                            UF == "Tocantins" ~ 17,
-                            UF == "Maranhão" ~ 21,
-                            UF == "Piauí" ~ 22,
-                            UF == "Ceará" ~ 23,
-                            UF == "Rio Grande do Norte" ~ 24,
-                            UF == "Paraíba" ~ 25,
-                            UF == "Pernambuco" ~ 26,
-                            UF == "Alagoas" ~ 27,
-                            UF == "Sergipe" ~ 28,
-                            UF == "Bahia" ~ 29,
-                            UF == "Minas Gerais" ~ 31,
-                            UF == "Espírito Santo" ~ 32,
-                            UF == "Rio de Janeiro" ~ 33,
-                            UF == "São Paulo" ~ 35,
-                            UF == "Paraná" ~ 41 ,
-                            UF == "Santa Catarina" ~ 42,
-                            UF == "Rio Grande do Sul" ~ 43,
-                            UF == "Mato Grosso do Sul" ~ 50,
-                            UF == "Mato Grosso" ~ 51,
-                            UF == "Goiás" ~ 52,
-                            UF == "Distrito Federal" ~ 53,
-                            UF == "Brasil" ~ 99),
-         region = case_when(11 <= Estado & Estado <= 17 ~ "Norte",
-                            21 <= Estado & Estado <= 29 ~ "Nordeste",
-                            (31 <= Estado & Estado <= 33) | Estado == 35 ~ "Sudeste",
-                            41 <= Estado & Estado <= 43 ~ "Sul",
-                            50 <= Estado & Estado <= 53 ~ "Centro-Oeste",
-                            Estado > 55 ~ "Brasil"),
-         sigla = case_when(UF == "Rondônia" ~ "RO",
-                           UF == "Acre" ~ "AC",
-                           UF == "Amazonas" ~ "AM",
-                           UF == "Roraima" ~ "RR",
-                           UF == "Pará" ~ "PA",
-                           UF == "Amapá" ~ "AP",
-                           UF == "Tocantins" ~ "TO",
-                           UF == "Maranhão" ~ "MA",
-                           UF == "Piauí" ~ "PI",
-                           UF == "Ceará" ~ "CE",
-                           UF == "Rio Grande do Norte" ~ "RN",
-                           UF == "Paraíba" ~ "PB",
-                           UF == "Pernambuco" ~ "PE",
-                           UF == "Alagoas" ~ "AL",
-                           UF == "Sergipe" ~ "SE",
-                           UF == "Bahia" ~ "BA",
-                           UF == "Minas Gerais" ~ "MG",
-                           UF == "Espírito Santo" ~ "ES",
-                           UF == "Rio de Janeiro" ~ "RJ",
-                           UF == "São Paulo" ~ "SP",
-                           UF == "Paraná" ~ "PR",
-                           UF == "Santa Catarina" ~ "SC",
-                           UF == "Rio Grande do Sul" ~ "RS",
-                           UF == "Mato Grosso do Sul" ~ "MS",
-                           UF == "Mato Grosso" ~ "MT",
-                           UF == "Goiás" ~ "GO",
-                           UF == "Distrito Federal" ~ "DF",
-                           UF == "Brasil" ~ "BR"),
-         idade = as.numeric(substr(Grupos.de.idade, start = 1, stop = 2)),
-         ASFR = Filhos.tidos.no.ultimo.ano/Mulheres) %>% 
-  filter(idade >=  15,
-         idade <= 45)
-
-################################
-
-## 3) Obitos Maternos ##
-Obitos.maternos2000.2018 <- Obitos.maternos2000.2018 %>%
+## 1) Obitos Maternos ##
+Obitos.maternos2000.2019 <- Obitos.maternos2000.2019 %>%
   group_by(UF) %>%
-  mutate( #Obitos.maternos2000.2018,  
+  mutate( 
     across("Prop.Incremento", ~(
       function(x) {
         for(i in 1:length(x))
@@ -263,37 +124,125 @@ Obitos.maternos2000.2018 <- Obitos.maternos2000.2018 %>%
                            UF == "Brasil" ~ "BR")) %>%
   arrange(Estado, Ano)
 
+################################
+
+## 2) Populacao Ambos os sexos 2000-2010 ##
+Pop.00.30 <- Pop.00.30 %>%
+  mutate(Estado = case_when(UF == "Rondônia" ~ 11,
+                            UF == "Acre" ~ 12,
+                            UF == "Amazonas" ~ 13,
+                            UF == "Roraima" ~ 14,
+                            UF == "Pará" ~ 15,
+                            UF == "Amapá" ~ 16,
+                            UF == "Tocantins" ~ 17,
+                            UF == "Maranhão" ~ 21,
+                            UF == "Piauí" ~ 22,
+                            UF == "Ceará" ~ 23,
+                            UF == "Rio Grande do Norte" ~ 24,
+                            UF == "Paraíba" ~ 25,
+                            UF == "Pernambuco" ~ 26,
+                            UF == "Alagoas" ~ 27,
+                            UF == "Sergipe" ~ 28,
+                            UF == "Bahia" ~ 29,
+                            UF == "Minas Gerais" ~ 31,
+                            UF == "Espírito Santo" ~ 32,
+                            UF == "Rio de Janeiro" ~ 33,
+                            UF == "São Paulo" ~ 35,
+                            UF == "Paraná" ~ 41 ,
+                            UF == "Santa Catarina" ~ 42,
+                            UF == "Rio Grande do Sul" ~ 43,
+                            UF == "Mato Grosso do Sul" ~ 50,
+                            UF == "Mato Grosso" ~ 51,
+                            UF == "Goiás" ~ 52,
+                            UF == "Distrito Federal" ~ 53,
+                            UF == "Brasil" ~ 99),
+         region = case_when(11 <= Estado & Estado <= 17 ~ "Norte",
+                            21 <= Estado & Estado <= 29 ~ "Nordeste",
+                            (31 <= Estado & Estado <= 33) | Estado == 35 ~ "Sudeste",
+                            41 <= Estado & Estado <= 43 ~ "Sul",
+                            50 <= Estado & Estado <= 53 ~ "Centro-Oeste",
+                            Estado > 55 ~ "Brasil"),
+         sigla = case_when(UF == "Rondônia" ~ "RO",
+                           UF == "Acre" ~ "AC",
+                           UF == "Amazonas" ~ "AM",
+                           UF == "Roraima" ~ "RR",
+                           UF == "Pará" ~ "PA",
+                           UF == "Amapá" ~ "AP",
+                           UF == "Tocantins" ~ "TO",
+                           UF == "Maranhão" ~ "MA",
+                           UF == "Piauí" ~ "PI",
+                           UF == "Ceará" ~ "CE",
+                           UF == "Rio Grande do Norte" ~ "RN",
+                           UF == "Paraíba" ~ "PB",
+                           UF == "Pernambuco" ~ "PE",
+                           UF == "Alagoas" ~ "AL",
+                           UF == "Sergipe" ~ "SE",
+                           UF == "Bahia" ~ "BA",
+                           UF == "Minas Gerais" ~ "MG",
+                           UF == "Espírito Santo" ~ "ES",
+                           UF == "Rio de Janeiro" ~ "RJ",
+                           UF == "São Paulo" ~ "SP",
+                           UF == "Paraná" ~ "PR",
+                           UF == "Santa Catarina" ~ "SC",
+                           UF == "Rio Grande do Sul" ~ "RS",
+                           UF == "Mato Grosso do Sul" ~ "MS",
+                           UF == "Mato Grosso" ~ "MT",
+                           UF == "Goiás" ~ "GO",
+                           UF == "Distrito Federal" ~ "DF",
+                           UF == "Brasil" ~ "BR"))
+
+################################
+## 3) RMM extraidas do sistema de vigilância (2009-2018) ##
+
+RMM.ibge.09.18 <- RMM.ibge.09.18 %>%
+  rename(UF = Estados) %>%
+  mutate(Estado = case_when(UF == "Rondônia" ~ 11,
+                            UF == "Acre" ~ 12,
+                            UF == "Amazonas" ~ 13,
+                            UF == "Roraima" ~ 14,
+                            UF == "Pará" ~ 15,
+                            UF == "Amapá" ~ 16,
+                            UF == "Tocantins" ~ 17,
+                            UF == "Maranhão" ~ 21,
+                            UF == "Piauí" ~ 22,
+                            UF == "Ceará" ~ 23,
+                            UF == "Rio Grande do Norte" ~ 24,
+                            UF == "Paraíba" ~ 25,
+                            UF == "Pernambuco" ~ 26,
+                            UF == "Alagoas" ~ 27,
+                            UF == "Sergipe" ~ 28,
+                            UF == "Bahia" ~ 29,
+                            UF == "Minas Gerais" ~ 31,
+                            UF == "Espírito Santo" ~ 32,
+                            UF == "Rio de Janeiro" ~ 33,
+                            UF == "São Paulo" ~ 35,
+                            UF == "Paraná" ~ 41 ,
+                            UF == "Santa Catarina" ~ 42,
+                            UF == "Rio Grande do Sul" ~ 43,
+                            UF == "Mato Grosso do Sul" ~ 50,
+                            UF == "Mato Grosso" ~ 51,
+                            UF == "Goiás" ~ 52,
+                            UF == "Distrito Federal" ~ 53,
+                            UF == "Brasil" ~ 99)) %>%
+  pivot_longer(!c(Estado, UF), names_to = "var", values_to = "RMM.Ibge") %>%
+  mutate(Ano = rep(seq(2009, 2018, by = 1), 28)) %>%
+  select(!var)
+
 ##----------------------------------------------------------------------------------------------------------
 
 ## Calculando a TEF por diferentes métodos para UFs
 
-################################
 ## 1) Gompertz ##
 novo <- NULL
-TEF.2000.2010 <- NULL
+TEF.2000.2019 <- NULL
 
-for (j in unique(fecundidade2000.2010$Ano)) {
-  for (i in  unique(fecundidade2000.2010$Estado)) {
+for (j in unique(fecundidade.2000.2019$Ano)) {
+  for (i in  unique(fecundidade.2000.2019$Estado)) {
     cat(paste("\nProcessing UF", i, "ano", j, sep = " "))
     
-    data <- fecundidade2000.2010 %>%
+    data <- fecundidade.2000.2019 %>%
       filter(Estado == i,
              Ano == j)  
-    
-    Gompertz2000.2010 <- fertGompPF(ages = data$idade, P = data$Parity, asfr = data$ASFR, level = T, plot.diagnostic = F)[[1]]
-    
-    Gompertz2000.2010 <- Gompertz2000.2010 %>%
-      mutate(Estado = i,
-             Ano = j, 
-             idade = as.numeric(substr(age.group, start = 1, stop = 2))) %>%
-      filter(idade >= 15) %>%
-      select(Estado, Ano, idade, asfr.adj) %>%
-      rename(Gompertz = asfr.adj) %>%
-      left_join(fecundidade2000.2010, by = c("Estado", "Ano", "idade"))  %>%
-      select(Estado, UF, region, Ano, Grupos.de.idade, idade, Mulheres, Filhos.Tidos.Nascidos.Vivos, Filhos.tidos.no.ultimo.ano, 
-             Parity, ASFR, Gompertz)
-    
-    TEF.2000.2010 <- rbind(Gompertz2000.2010, TEF.2000.2010)
     
     Gompertz.sem.P <- fertGompPF(ages = data$idade, asfr = data$ASFR, level = F, plot.diagnostic = F)[[1]]
     
@@ -304,372 +253,130 @@ for (j in unique(fecundidade2000.2010$Ano)) {
       filter(idade >= 15) %>%
       select(Estado, Ano, idade, asfr.adj) %>%
       rename(Gompertz.sem.P = asfr.adj) %>%
-      left_join(fecundidade2000.2010, by = c("Estado", "Ano", "idade"))  %>%
+      left_join(fecundidade.2000.2019, by = c("Estado", "Ano", "idade"))  %>%
       select(Estado, UF, region, Ano, idade, Gompertz.sem.P)
     
     novo <- rbind(Gompertz.sem.P, novo)
   }
 }
 
-################################
-## 2) Brass, Coale e Trussel ##
-TEF.2000.2010 <- TEF.2000.2010 %>%
-  left_join(novo, by = c("Estado", "Ano", "idade", "region", "UF")) %>%
-  group_by(Ano, Estado) %>%
-  mutate(Brass = unlist(do.call(rbind, lapply(fertBrassPF(ages = idade, P = Parity, asfr = ASFR)[1], as.data.frame)) %>%
-                          select(adj_asfr)),
-         Coale.Trussel = unlist(do.call(rbind, lapply(fertBrassPF.cltrss(ages = idade, P = Parity, asfr = ASFR)[1], as.data.frame)) %>%
-                                  select(adj_asfr))) %>%
-  select(UF, Grupos.de.idade, Ano, Estado, region, idade, Mulheres, Filhos.Tidos.Nascidos.Vivos, Filhos.tidos.no.ultimo.ano, 
-         Parity, ASFR, Brass, Coale.Trussel, Gompertz, Gompertz.sem.P) %>%
-  ungroup() %>%
-  as.data.frame()
+fecundidade.2000.2019 <- fecundidade.2000.2019 %>%
+  left_join(novo, by = c("Estado", "Ano", "idade", "region", "UF"))
 
-rm(novo, data, Gompertz.sem.P, Gompertz2000.2010)
+rm(novo, data, Gompertz.sem.P)
 
 ################################
-## 3) Calculando os ajustes de cada método por idade ##
-TEF.2000.2010 <- TEF.2000.2010 %>%
-  mutate(ratio.Obs.Brass = Brass/ASFR,
-         ratio.Obs.CT = Coale.Trussel/ASFR,
-         ratio.Obs.Gompertz = Gompertz/ASFR)
+
+## 2) Calculando os ajustes de cada método por idade ##
+fecundidade.2000.2019 <- fecundidade.2000.2019 %>%
+  mutate(ratio.Obs.Gompertz.sem.P = Gompertz.sem.P/ASFR)
 
 ##----------------------------------------------------------------------------------------------------------
 
 ## Calculando a TFT 
+## 1) De 2000-2010 - Sinasc ## 
 
-################################
-## 1) De 2000-2010 - Censos ## 
-Total.2000.2010 <- fecundidade2000.2010 %>%
-  group_by(Estado, UF, Ano) %>%
-  summarise(Women = sum(Mulheres),
-            Filhos.Tidos = sum(Filhos.Tidos.Nascidos.Vivos),
-            Nascimentos = sum(Filhos.tidos.no.ultimo.ano),
-            TFT = (sum(ASFR)*5)) %>%
-  ungroup() %>%
-  arrange(Estado, Ano)
-
-################################
-## 2) De 2011-2018 - SINASC ## 
-Total.2011.2018 <- fecundidade2011.2018 %>%
+Total.2000.2019 <- fecundidade.2000.2019 %>%
   group_by(Estado, UF, Ano) %>%
   summarise(Women = sum(Mulheres),
             Nascimentos = sum(Filhos.tidos.no.ultimo.ano),
             TFT = (sum(ASFR)*5)) %>%
   ungroup() %>%
   arrange(Estado, Ano)
+
 
 ##----------------------------------------------------------------------------------------------------------
 
 ## Calculando TFT para Gompertz, Brass e Coale & Trussel
-
-################################
 ## 1) De 2000-2010 - Censos ## 
 
-TFT.2000.2010 <- NULL
+TFT.2000.2019 <- NULL
 
-for (j in unique(fecundidade2000.2010$Ano)) {
-  for (i in unique(fecundidade2000.2010$Estado)) {
+for (j in unique(fecundidade.2000.2019$Ano)) {
+  for (i in unique(fecundidade.2000.2019$Estado)) {
     cat(paste("\nProcessing", i, "ano", j, sep = " "))
-    data <- fecundidade2000.2010 %>%
+    
+    data <- fecundidade.2000.2019 %>%
       filter(Estado == i,
              Ano == j) 
     
-    Brass <- fertBrassPF(ages = data$idade, P = data$Parity, asfr = data$ASFR)[[3]]
-    Coale.Trussel <- fertBrassPF.cltrss(ages = data$idade, P = data$Parity, asfr = data$ASFR)[[3]]
-    Gompertz <- fertGompPF(ages = data$idade, P = data$Parity, asfr = data$ASFR, level = T, plot.diagnostic = F)[[2]]
     Gompertz.sem.P <- fertGompPF(ages = data$idade, asfr = data$ASFR, level = F, plot.diagnostic = F)[[2]]
     Gompertz.sem.P <- Gompertz.sem.P$TFR.adj
-    novo <- cbind(Ano = j, Estado = i, Brass, Coale.Trussel, Gompertz, Gompertz.sem.P)
-    TFT.2000.2010 <-  rbind(TFT.2000.2010, novo)
+    novo <- cbind(Ano = j, Estado = i, Gompertz.sem.P)
+    TFT.2000.2019 <-  rbind(TFT.2000.2019, novo)
     
   }
 }
 
-TFT.2000.2010 <- TFT.2000.2010 %>%
-  rename (Gompertz = TFR.adj) %>%
-  right_join(Total.2000.2010, by = c("Ano", "Estado")) %>%
-  select(Ano, UF, Estado, Women, Filhos.Tidos, Nascimentos, TFT, 
-         Brass, Coale.Trussel, Gompertz, Gompertz.sem.P) %>%
-  mutate(ratio.Obs.Brass = Brass/TFT,
-         ratio.Obs.CT = Coale.Trussel/TFT,
-         ratio.Obs.Gompertz = Gompertz/TFT,
-         ratio.Obs.Gompertz.sem.P = Gompertz.sem.P/TFT) %>%
+TFT.2000.2019 <- TFT.2000.2019 %>%
+  as.data.frame() %>%
+  right_join(Total.2000.2019, by = c("Ano", "Estado")) %>%
+  select(Ano, UF, Estado, Women, Nascimentos, TFT, Gompertz.sem.P) %>%
+  mutate(ratio.Obs.Gompertz.sem.P = Gompertz.sem.P/TFT) %>%
   ungroup()
 
-rm(Brass, Coale.Trussel, Gompertz, Gompertz.sem.P, novo, data)
-
-################################
-## 3) De 2011-2018 - SINASC ##
-
-TFT.2011.2018 <- NULL
-
-for (j in unique(fecundidade2011.2018$Ano)) {
-  for (i in unique(fecundidade2011.2018$Estado)) {
-    cat(paste("\nProcessing", i, "ano", j, sep = " "))
-    
-    data <- fecundidade2011.2018 %>%
-      filter(Estado == i,
-             Ano == j) 
-    
-    Gompertz.TFT.11.18 <- fertGompPF(ages = data$idade, asfr = data$ASFR, level = F, plot.diagnostic = F)[[2]]
-    novo <- cbind(Ano = j, Estado = i, Gompertz.TFT.11.18)
-    TFT.2011.2018 <-  rbind(TFT.2011.2018, novo)
-  }
-}
-
-TFT.2011.2018 <- TFT.2011.2018 %>%
-  rename (Gompertz.sem.P = TFR.adj) %>%
-  right_join(Total.2011.2018, by = c("Ano", "Estado")) %>%
-  select(Ano, UF, Estado, Women, Nascimentos, TFT, Gompertz.sem.P)
-
-
-rm(novo, Gompertz.TFT.11.18, data)
-##----------------------------------------------------------------------------------------------------------
-
-## Interpolando valores de Mulheres, Nascimentos, Filhos Tidos, TFT, Brass, Coale & Trussel, Gompertz e Gompertz sem Parturição
-
-################################
-## 1) De 2000-2010 - Censos ## 
-
-Interp.Total.2000.2010 <- NULL
-
-for (i in unique(TFT.2000.2010$Estado)) {
-  cat(paste("\nProcessing", i, sep = " "))
-  data <- TFT.2000.2010 %>%
-    filter(Estado == i)  
-  
-  interpolacao <- as.data.frame(approx(data$Women, method = "linear", n = 11)[[2]])
-  Interpolando.00.10 <- interpolacao
-  interpolacao <- as.data.frame(approx(data$Filhos.Tidos, method = "linear", n = 11)[[2]])
-  Interpolando.00.10 <- cbind(Interpolando.00.10, interpolacao)
-  interpolacao <- as.data.frame(approx(data$Nascimentos, method = "linear", n = 11)[[2]])
-  Interpolando.00.10 <- cbind(Interpolando.00.10, interpolacao)
-  interpolacao <- as.data.frame(approx(data$TFT, method = "linear", n = 11)[[2]])
-  Interpolando.00.10 <- cbind(Interpolando.00.10, interpolacao)
-  interpolacao <- as.data.frame(approx(data$Brass, method = "linear", n = 11)[[2]])
-  Interpolando.00.10 <- cbind(Interpolando.00.10, interpolacao)
-  interpolacao <- as.data.frame(approx(data$Coale, method = "linear", n = 11)[[2]])
-  Interpolando.00.10 <- cbind(Interpolando.00.10, interpolacao)
-  interpolacao <- as.data.frame(approx(data$Gompertz, method = "linear", n = 11)[[2]])
-  Interpolando.00.10 <- cbind(Interpolando.00.10, interpolacao)
-  interpolacao <- as.data.frame(approx(data$Gompertz.sem.P, method = "linear", n = 11)[[2]])
-  Interpolando.00.10 <- cbind(Interpolando.00.10, interpolacao)
-  
-  novo <- cbind(Estado = i, Interpolando.00.10)
-  Interp.Total.2000.2010 <-  rbind(Interp.Total.2000.2010, novo)
-  
-}
-
-Interp.Total.2000.2010 <- Interp.Total.2000.2010 %>%
-  rename (Mulheres = `approx(data$Women, method = \"linear\", n = 11)[[2]]`,
-          Filhos.Tidos = `approx(data$Filhos.Tidos, method = \"linear\", n = 11)[[2]]`,
-          Nascimentos = `approx(data$Nascimentos, method = \"linear\", n = 11)[[2]]`,
-          TFT = `approx(data$TFT, method = \"linear\", n = 11)[[2]]`,
-          Brass = `approx(data$Brass, method = \"linear\", n = 11)[[2]]`,
-          Coale.Trussel = `approx(data$Coale, method = \"linear\", n = 11)[[2]]`,
-          Gompertz = `approx(data$Gompertz, method = \"linear\", n = 11)[[2]]`,
-          Gompertz.sem.P = `approx(data$Gompertz.sem.P, method = \"linear\", n = 11)[[2]]`) %>%
-  arrange(Estado) %>%
-  group_by(Estado) %>%
-  mutate(Ano = seq(2000, 2010),
-         Parity = Filhos.Tidos/Mulheres, 
-         UF = case_when(Estado == 11 ~ "Rondônia",
-                        Estado == 12 ~ "Acre",
-                        Estado == 13 ~ "Amazonas",
-                        Estado == 14 ~ "Roraima",
-                        Estado == 15 ~ "Pará",
-                        Estado == 16 ~ "Amapá",
-                        Estado == 17 ~ "Tocantins",
-                        Estado == 21 ~ "Maranhão",
-                        Estado == 22 ~ "Piauí",
-                        Estado == 23 ~ "Ceará",
-                        Estado == 24 ~ "Rio Grande do Norte",
-                        Estado == 25 ~ "Paraíba",
-                        Estado == 26 ~ "Pernambuco",
-                        Estado == 27 ~ "Alagoas",
-                        Estado == 28 ~ "Sergipe",
-                        Estado == 29 ~ "Bahia",
-                        Estado == 31 ~ "Minas Gerais",
-                        Estado == 32 ~ "Espírito Santo",
-                        Estado == 33 ~ "Rio de Janeiro",
-                        Estado == 35 ~ "São Paulo",
-                        Estado == 41 ~ "Paraná",
-                        Estado == 42 ~ "Santa Catarina",
-                        Estado == 43 ~ "Rio Grande do Sul",
-                        Estado == 50 ~ "Mato Grosso do Sul",
-                        Estado == 51 ~ "Mato Grosso",
-                        Estado == 52 ~ "Goiás",
-                        Estado == 53 ~ "Distrito Federal",
-                        Estado == 99 ~ "Brasil"),
-         ratio.Obs.Brass = Brass/TFT,
-         ratio.Obs.CT = Coale.Trussel/TFT,
-         ratio.Obs.Gompertz = Gompertz/TFT,
-         ratio.Obs.Gompertz.sem.P = Gompertz.sem.P/TFT) %>%
-  ungroup() %>%
-  group_by(Ano) %>%
-  mutate(index = rep(seq(1, 28), times = length(unique(Ano)))) %>%
-  ungroup() %>%
-  arrange(Ano, Estado) %>%
-  select(UF, Estado, Ano, Mulheres, Filhos.Tidos, Nascimentos, Parity, 
-         TFT, Brass, Coale.Trussel, Gompertz, Gompertz.sem.P, 
-         ratio.Obs.Brass, ratio.Obs.CT, ratio.Obs.Gompertz, ratio.Obs.Gompertz.sem.P, index) %>%
-  ungroup() 
-
-rm(data, interpolacao, novo, Interpolando.00.10)
-
-################################
-## 2) De 2010-2018 - SINASC ##
-
-Interp.Total.2011.2018 <- NULL
-
-for (i in unique(TFT.2011.2018$Estado)) {
-  cat(paste("\nProcessing", i, sep = " "))
-  data <- TFT.2011.2018 %>%
-    filter(Estado == i)  
-  
-  interpolacao <- as.data.frame(approx(data$Women, method = "linear", n = 8)[[2]])
-  Interpolando.11.18 <- interpolacao
-  interpolacao <- as.data.frame(approx(data$Nascimentos, method = "linear", n = 8)[[2]])
-  Interpolando.11.18 <- cbind(Interpolando.11.18, interpolacao)
-  interpolacao <- as.data.frame(approx(data$TFT, method = "linear", n = 8)[[2]])
-  Interpolando.11.18 <- cbind(Interpolando.11.18, interpolacao)
-  interpolacao <- as.data.frame(approx(data$Gompertz.sem.P, method = "linear", n = 8)[[2]])
-  Interpolando.11.18 <- cbind(Interpolando.11.18, interpolacao)
-  novo <- cbind(Estado = i, Interpolando.11.18)
-  Interp.Total.2011.2018 <-  rbind(Interp.Total.2011.2018, novo)
-  
-}
-
-Interp.Total.2011.2018 <- Interp.Total.2011.2018 %>%
-  rename (Mulheres = `approx(data$Women, method = \"linear\", n = 8)[[2]]`,
-          Nascimentos = `approx(data$Nascimentos, method = \"linear\", n = 8)[[2]]`,
-          TFT = `approx(data$TFT, method = \"linear\", n = 8)[[2]]`,
-          Gompertz.sem.P = `approx(data$Gompertz.sem.P, method = \"linear\", n = 8)[[2]]`) %>%
-  arrange(Estado) %>%
-  group_by(Estado) %>%
-  mutate(Ano = seq(2011, 2018),
-         UF = case_when(Estado == 11 ~ "Rondônia",
-                        Estado == 12 ~ "Acre",
-                        Estado == 13 ~ "Amazonas",
-                        Estado == 14 ~ "Roraima",
-                        Estado == 15 ~ "Pará",
-                        Estado == 16 ~ "Amapá",
-                        Estado == 17 ~ "Tocantins",
-                        Estado == 21 ~ "Maranhão",
-                        Estado == 22 ~ "Piauí",
-                        Estado == 23 ~ "Ceará",
-                        Estado == 24 ~ "Rio Grande do Norte",
-                        Estado == 25 ~ "Paraíba",
-                        Estado == 26 ~ "Pernambuco",
-                        Estado == 27 ~ "Alagoas",
-                        Estado == 28 ~ "Sergipe",
-                        Estado == 29 ~ "Bahia",
-                        Estado == 31 ~ "Minas Gerais",
-                        Estado == 32 ~ "Espírito Santo",
-                        Estado == 33 ~ "Rio de Janeiro",
-                        Estado == 35 ~ "São Paulo",
-                        Estado == 41 ~ "Paraná",
-                        Estado == 42 ~ "Santa Catarina",
-                        Estado == 43 ~ "Rio Grande do Sul",
-                        Estado == 50 ~ "Mato Grosso do Sul",
-                        Estado == 51 ~ "Mato Grosso",
-                        Estado == 52 ~ "Goiás",
-                        Estado == 53 ~ "Distrito Federal",
-                        Estado == 99 ~ "Brasil")) %>%
-  select(UF, Estado, Ano, Mulheres, Nascimentos, TFT, Gompertz.sem.P) %>%
-  arrange(Estado, Ano) %>%
-  ungroup() %>%
-  mutate (Brass = NA,
-          Coale.Trussel = NA, 
-          Gompertz = NA) %>%
-  select(Ano, UF, Estado, Mulheres, Nascimentos, TFT, Brass, Coale.Trussel, Gompertz, Gompertz.sem.P) %>%
-  ungroup() %>%
-  mutate(ratio.Obs.Brass = NA, 
-         ratio.Obs.CT = NA,
-         ratio.Obs.Gompertz = NA,
-         ratio.Obs.Gompertz.sem.P = Gompertz.sem.P/TFT) %>%
-  arrange(Ano, Estado) %>%
-  group_by(Ano) %>%
-  mutate(index = rep(seq(1, 28), times = length(unique(Ano)))) %>%
-  ungroup()
-
-rm(data, interpolacao, novo, Interpolando.11.18)
-
-################################
-## 3) Ajustando os anos 2011-2018 a partir das razoes de 2010
-# Razoes de correcao de 2010 por UF
-Brass.2010 <- TFT.2000.2010 %>%
-  filter(Ano == 2010) %>%
-  select(Ano, UF, Estado, ratio.Obs.Brass)
-
-Coale.Trussel.2010 <- TFT.2000.2010 %>%
-  filter(Ano == 2010) %>%
-  select(Ano, UF, Estado, ratio.Obs.CT)
-
-Gompertz.2010 <- TFT.2000.2010 %>%
-  filter(Ano == 2010) %>%
-  select(Ano, UF, Estado, ratio.Obs.Gompertz)
-
-# Ajuste
-Interp.Total.2011.2018 <- Interp.Total.2011.2018 %>% 
-  group_by(UF, Ano) %>%
-  mutate(ratio.Obs.Brass = Brass.2010$ratio.Obs.Brass[Brass.2010$UF == UF],
-         ratio.Obs.CT = Coale.Trussel.2010$ratio.Obs.CT[Coale.Trussel.2010$UF == UF],
-         ratio.Obs.Gompertz = Gompertz.2010$ratio.Obs.Gompertz[Gompertz.2010$UF == UF]) %>%
-  ungroup() %>%
-  mutate(Brass = TFT * ratio.Obs.Brass,
-         Coale.Trussel = TFT * ratio.Obs.CT,
-         Gompertz = TFT * ratio.Obs.Gompertz)
-
-rm(Gompertz.2010, Brass.2010, Coale.Trussel.2010)
-
-################################
-## 4) Juntando os bancos para 2000-2018
-Interp.Total.2000.2018 <- Interp.Total.2000.2010 %>%
-  bind_rows(Interp.Total.2011.2018) %>%
-  select(Ano, UF, Estado, Mulheres, Nascimentos, 
-         TFT, Brass, Coale.Trussel, Gompertz, Gompertz.sem.P, 
-         ratio.Obs.Brass, ratio.Obs.CT, ratio.Obs.Gompertz, ratio.Obs.Gompertz.sem.P) %>%
-  arrange(Estado, Ano)
+rm(Gompertz.sem.P, novo, data, Total.2000.2019)
 
 ##----------------------------------------------------------------------------------------------------------
 
 # Adicionando o Banco de Obitos Maternos
-
 ## 1) Juntando o banco de TFT com o banco de obitos
-Interp.Total.2000.2018 <- Interp.Total.2000.2018 %>%
-  left_join(Obitos.maternos2000.2018, by = c("Estado", "UF", "Ano")) %>%
+
+TFT.2000.2019 <- TFT.2000.2019 %>%
+  left_join(Obitos.maternos2000.2019, by = c("Estado", "UF", "Ano")) %>%
   as.data.frame() %>%
   group_by(Ano, Estado) %>%
-  mutate(NV.Ajus.Brass = Nascimentos * ratio.Obs.Brass,
-         NV.Ajus.CT = Nascimentos * ratio.Obs.CT,
-         NV.Ajus.Gompertz = Nascimentos * ratio.Obs.Gompertz,
-         NV.Ajus.Gompertz.sem.P = Nascimentos * ratio.Obs.Gompertz.sem.P,
+  mutate(NV.Ajus.Gompertz.sem.P = Nascimentos * ratio.Obs.Gompertz.sem.P,
          RMM = (Obitos.Obs / Nascimentos) * 100000,
          RMM.Obt.Corr = (Obitos.Ajust / Nascimentos) * 100000,
-         RMM.Brass = (Obitos.Ajust / NV.Ajus.Brass) * 100000,
-         RMM.CT = (Obitos.Ajust / NV.Ajus.CT) * 100000,
-         RMM.Gompertz = (Obitos.Ajust / NV.Ajus.Gompertz) * 100000,
          RMM.Gompertz.sem.P = (Obitos.Ajust / NV.Ajus.Gompertz.sem.P) * 100000,
-         TMM = (Obitos.Obs / Mulheres) * 100000,
-         TMM.Ajust = (Obitos.Ajust / Mulheres) * 100000) %>%
+         TMM = (Obitos.Obs / Women) * 100000,
+         TMM.Ajust = (Obitos.Ajust / Women) * 100000) %>%
   ungroup()
+
+################################
+## 2) Juntando as RMMs Geradas com as calculadas pelo IBGE e usando a razões para criar RMM.Ibge(2019) ##
+
+TFT.2000.2019 <- TFT.2000.2019 %>%
+  left_join(RMM.ibge.09.18, by = c("Estado", "UF", "Ano")) %>%
+  mutate(ratio = RMM.Ibge/RMM) %>%
+  group_by(UF) %>%
+  mutate( 
+    across("RMM.Ibge", ~(
+      function(x) {
+        for(i in 1:length(x))
+        {
+          if(is.na(x[i]) & Ano[i] > 2018)
+            x[i] <- ratio[Ano == 2018] * RMM[Ano == 2018]
+          
+          else if(is.na(x[i]) & Ano[i] < 2018)
+            x[i] <- x[i]
+          
+        }
+        return(x)
+      } ) # end of function spec
+      (.) ) # end of across spec
+  ) %>% # end of mutate
+  ungroup() %>%
+  select(-ratio)
 
 ##----------------------------------------------------------------------------------------------------------
 # Fonte: Jain, A. K. (2011). Measuring the Effect of Fertility Decline on the Maternal Mortality Ratio. 
 #        Studies in Family Planning, 42(4), 247–260. doi:10.1111/j.1728-4465.2011.00288.x 
 
 ### Estimation of the effect of declines in maternal mortality ratio (MMR) and fertility on estimated number of maternal ###
- ### deaths averted in 2018 ###
+ ### deaths averted in 2019 ###
 
-# Usando os dados do BR
-BR.Decomp <- Interp.Total.2000.2018 %>%
+## 1) Juntando as bases de populacao total e TFT ##
+TFT.2000.2019 <- TFT.2000.2019 %>%
+  left_join(Pop.00.30, by = c("Ano", "sigla", "UF", "Estado", "region")) 
+
+## 2) Usando os dados do BR ##
+Decomp <- TFT.2000.2019 %>%
   filter(sigla == "BR",
-         Ano == 2000 | Ano == 2010 | Ano == 2018)  %>% 
-  inner_join(BR.Pop, c("Ano" = "Ano")) %>%
-  select(Ano, Estado, UF, sigla, region, Pop, Mulheres, Nascimentos, NV.Ajus.CT, NV.Ajus.Gompertz, TFT, RMM, RMM.Obt.Corr, RMM.Brass, 
-         RMM.CT, RMM.Gompertz, RMM.Gompertz.sem.P) %>%
+         Ano == 2009 | Ano == 2014 | Ano == 2019)  %>% 
+  select(Ano, Estado, UF, sigla, region, Pop, Women, Nascimentos, NV.Ajus.Gompertz.sem.P, 
+         TFT, Gompertz.sem.P, RMM, RMM.Obt.Corr, RMM.Ibge, RMM.Gompertz.sem.P) %>%
   mutate(TBN = (Nascimentos/Pop) * 1000,
          r = NA,
          P_hat = NA, 
@@ -683,60 +390,60 @@ BR.Decomp <- Interp.Total.2000.2018 %>%
          Y = NA,
          Z = NA)
 
-# r = Annual population growth rate: 2000-2010 and 2010-2018
-BR.Decomp$r[BR.Decomp$Ano == 2010] <- ((log(BR.Decomp$Pop[BR.Decomp$Ano == 2010] / BR.Decomp$Pop[BR.Decomp$Ano == 2000])) / 10)
-BR.Decomp$r[BR.Decomp$Ano == 2018] <- ((log(BR.Decomp$Pop[BR.Decomp$Ano == 2018] / BR.Decomp$Pop[BR.Decomp$Ano == 2010])) / 8)
+# r = Annual population growth rate: 2009-2014 and 2014-2019
+Decomp$r[Decomp$Ano == 2014] <- ((log(Decomp$Pop[Decomp$Ano == 2014] / Decomp$Pop[Decomp$Ano == 2009])) / 10)
+Decomp$r[Decomp$Ano == 2019] <- ((log(Decomp$Pop[Decomp$Ano == 2019] / Decomp$Pop[Decomp$Ano == 2014])) / 9)
 
-# P_hat = 2018 estimated population assuming constant annual growth rate from 2000-2010
-BR.Decomp$P_hat[BR.Decomp$Ano == 2018] <- BR.Decomp$Pop[BR.Decomp$Ano == 2000] * (exp(18 * BR.Decomp$r[BR.Decomp$Ano == 2010]))
+# P_hat = 2019 estimated population assuming constant annual growth rate from 2009-2014
+Decomp$P_hat[Decomp$Ano == 2019] <- Decomp$Pop[Decomp$Ano == 2009] * (exp(19 * Decomp$r[Decomp$Ano == 2014]))
 
-# B_hat = Projected births in 2018 assuming constant fertility
-BR.Decomp$B_hat[BR.Decomp$Ano == 2018] <- BR.Decomp$P_hat[BR.Decomp$Ano == 2018] * BR.Decomp$TBN[BR.Decomp$Ano == 2000] / 1000
+# B_hat = Projected births in 2019 assuming constant fertility
+Decomp$B_hat[Decomp$Ano == 2019] <- Decomp$P_hat[Decomp$Ano == 2019] * Decomp$TBN[Decomp$Ano == 2009] / 1000
 
-# B = Actual births in 2018 
-BR.Decomp$B[BR.Decomp$Ano == 2018] <- BR.Decomp$Nascimentos[BR.Decomp$Ano == 2018]
-#BR.Decomp$B2[BR.Decomp$Ano == 2018] <- BR.Decomp$P_hat[BR.Decomp$Ano == 2018] * BR.Decomp$TBN[BR.Decomp$Ano == 2018] / 1000
+# B = Actual births in 2019 
+Decomp$B[Decomp$Ano == 2019] <- Decomp$Nascimentos[Decomp$Ano == 2019]
+#Decomp$B2[Decomp$Ano == 2019] <- Decomp$P_hat[Decomp$Ano == 2019] * Decomp$TBN[Decomp$Ano == 2019] / 1000
 
 
 # D1_hat = No change in CBR and no change in MMR
-BR.Decomp$D1_hat[BR.Decomp$Ano == 2018] <- BR.Decomp$B_hat[BR.Decomp$Ano == 2018] * BR.Decomp$RMM.CT[BR.Decomp$Ano == 2000] / 100000
+Decomp$D1_hat[Decomp$Ano == 2019] <- Decomp$B_hat[Decomp$Ano == 2019] * Decomp$RMM.Ibge[Decomp$Ano == 2009] / 100000
 
 # D3_hat = MMR declined but CBR did not
-BR.Decomp$D3_hat[BR.Decomp$Ano == 2018] <- BR.Decomp$B_hat[BR.Decomp$Ano == 2018] * BR.Decomp$RMM.CT[BR.Decomp$Ano == 2018] / 100000
+Decomp$D3_hat[Decomp$Ano == 2019] <- Decomp$B_hat[Decomp$Ano == 2019] * Decomp$RMM.Ibge[Decomp$Ano == 2019] / 100000
 
 # D2_hat = CBR declined but MMR did not
-BR.Decomp$D2_hat[BR.Decomp$Ano == 2018] <- BR.Decomp$B[BR.Decomp$Ano == 2018] * BR.Decomp$RMM.CT[BR.Decomp$Ano == 2000] / 100000
+Decomp$D2_hat[Decomp$Ano == 2019] <- Decomp$B[Decomp$Ano == 2019] * Decomp$RMM.Ibge[Decomp$Ano == 2009] / 100000
 
 # D = Both CBR and MMR declined
-BR.Decomp$D[BR.Decomp$Ano == 2018] <- BR.Decomp$B[BR.Decomp$Ano == 2018] * BR.Decomp$RMM.CT[BR.Decomp$Ano == 2018] / 100000
+Decomp$D[Decomp$Ano == 2019] <- Decomp$B[Decomp$Ano == 2019] * Decomp$RMM.Ibge[Decomp$Ano == 2019] / 100000
 
 
 # Y = Total effect of decline in MMR 
-BR.Decomp$Y <- BR.Decomp$D1_hat - BR.Decomp$D3_hat
+Decomp$Y <- Decomp$D1_hat - Decomp$D3_hat
 
 # X = Total effect of fertility decline
-BR.Decomp$X <- BR.Decomp$D1_hat - BR.Decomp$D2_hat
+Decomp$X <- Decomp$D1_hat - Decomp$D2_hat
 
 # Z = Total effect of declines in both fertility and MMR
-BR.Decomp$Z <- BR.Decomp$D1_hat - BR.Decomp$D
+Decomp$Z <- Decomp$D1_hat - Decomp$D
 
-BR.Decomp <- BR.Decomp %>%
+Decomp <- Decomp %>%
   mutate(intersec.X.Y = X + Y - Z, # intersec.X.Y = Overlap between the effect of declines in fertility and in MMR
          Alpha = Y - intersec.X.Y, # Alpha = Net effect of decline in MMR
          Beta = X - intersec.X.Y, # Beta = Net effect of fertility decline
-         Gama = (Alpha / Z) * 100, # Gama = Effect of safe motherhood on the % of the  potential number of maternal lives saved in 2018
-         Delta = (Beta / Z) * 100, # Delta = Effect of decrease in live births on the % of the  potential number of maternal lives saved in 2018
+         Gama = (Alpha / Z) * 100, # Gama = Effect of safe motherhood on the % of the  potential number of maternal lives saved in 2019
+         Delta = (Beta / Z) * 100, # Delta = Effect of decrease in live births on the % of the  potential number of maternal lives saved in 2019
          Omega = (intersec.X.Y / Z) * 100) # Omega = Effect of fertility reduction realized through its effect on MMR reduction
 
 ##----------------------------------------------------------------------------------------------------------
 
 ### Estimation of the decline in maternal mortality ratio and number of actual maternal deaths attributable to fertility decline ###
 
-BR.Decomp <- BR.Decomp %>%
+Decomp <- Decomp %>%
   mutate(RMM_hat = NA,
-         D.00 = NA,
-         D.18 = NA, 
-         D_hat.18 = NA,
+         D.09 = NA,
+         D.19 = NA, 
+         D_hat.19 = NA,
          Iota = NA,
          Kappa = NA,
          Lambda = NA,
@@ -750,47 +457,253 @@ BR.Decomp <- BR.Decomp %>%
          Tau.per = NA,
          Eta.per = NA)
 
-# RMM_hat = MMR in 2018 implied by fertility reduction observed during 2000-2018
-BR.Decomp$RMM_hat[BR.Decomp$Ano == 2018] <- BR.Decomp$RMM.CT[BR.Decomp$Ano == 2018] + 
-                                             ((BR.Decomp$B[BR.Decomp$Ano == 2018] / BR.Decomp$B_hat[BR.Decomp$Ano == 2018]) *
-                                                (BR.Decomp$RMM.CT[BR.Decomp$Ano == 2000] - BR.Decomp$RMM.CT[BR.Decomp$Ano == 2018]))
+# RMM_hat = MMR in 2019 implied by fertility reduction observed during 2009-2019
+Decomp$RMM_hat[Decomp$Ano == 2019] <- Decomp$RMM.Ibge[Decomp$Ano == 2019] + 
+                                             ((Decomp$B[Decomp$Ano == 2019] / Decomp$B_hat[Decomp$Ano == 2019]) *
+                                                (Decomp$RMM.Ibge[Decomp$Ano == 2009] - Decomp$RMM.Ibge[Decomp$Ano == 2019]))
                                                                       
-# D.00 = Maternal deaths in 2000
-BR.Decomp$D.00[BR.Decomp$Ano == 2018] <- (BR.Decomp$Nascimentos[BR.Decomp$Ano == 2000] * BR.Decomp$RMM.CT[BR.Decomp$Ano == 2000]) / 100000
+# D.09 = Maternal deaths in 2009
+Decomp$D.09[Decomp$Ano == 2019] <- (Decomp$Nascimentos[Decomp$Ano == 2009] * Decomp$RMM.Ibge[Decomp$Ano == 2009]) / 100000
 
-# D.18 = Maternal deaths in 2018
-BR.Decomp$D.18[BR.Decomp$Ano == 2018] <- (BR.Decomp$Nascimentos[BR.Decomp$Ano == 2018] * BR.Decomp$RMM.CT[BR.Decomp$Ano == 2018]) / 100000
+# D.19 = Maternal deaths in 2019
+Decomp$D.19[Decomp$Ano == 2019] <- (Decomp$Nascimentos[Decomp$Ano == 2019] * Decomp$RMM.Ibge[Decomp$Ano == 2019]) / 100000
 
-# D_hat.18 = Maternal deaths in 2018 implied by fertility decline observed between 2000 and 2018
-BR.Decomp$D_hat.18[BR.Decomp$Ano == 2018] <- (BR.Decomp$Nascimentos[BR.Decomp$Ano == 2018] *  BR.Decomp$RMM_hat[BR.Decomp$Ano == 2018]) / 100000
+# D_hat.19 = Maternal deaths in 2019 implied by fertility decline observed between 2009 and 2019
+Decomp$D_hat.19[Decomp$Ano == 2019] <- (Decomp$Nascimentos[Decomp$Ano == 2019] *  Decomp$RMM_hat[Decomp$Ano == 2019]) / 100000
 
 
 # Iota = Total decline in MMR between 1990 and 2008 
-BR.Decomp$Iota[BR.Decomp$Ano == 2018] <- BR.Decomp$RMM.CT[BR.Decomp$Ano == 2000] - BR.Decomp$RMM.CT[BR.Decomp$Ano == 2018]
-BR.Decomp$Iota.per[BR.Decomp$Ano == 2018] <- 100 #(in %)
+Decomp$Iota[Decomp$Ano == 2019] <- Decomp$RMM.Ibge[Decomp$Ano == 2009] - Decomp$RMM.Ibge[Decomp$Ano == 2019]
+Decomp$Iota.per[Decomp$Ano == 2019] <- 100 #(in %)
 
 # Kappa = Decline in MMR attributable to fertility reduction
-BR.Decomp$Kappa[BR.Decomp$Ano == 2018] <- BR.Decomp$RMM.CT[BR.Decomp$Ano == 2000] - BR.Decomp$RMM_hat[BR.Decomp$Ano == 2018]
-BR.Decomp$Kappa.per[BR.Decomp$Ano == 2018] <- (BR.Decomp$Kappa[BR.Decomp$Ano == 2018] * 100) / BR.Decomp$Iota[BR.Decomp$Ano == 2018] #(in %)
+Decomp$Kappa[Decomp$Ano == 2019] <- Decomp$RMM.Ibge[Decomp$Ano == 2009] - Decomp$RMM_hat[Decomp$Ano == 2019]
+Decomp$Kappa.per[Decomp$Ano == 2019] <- (Decomp$Kappa[Decomp$Ano == 2019] * 100) / Decomp$Iota[Decomp$Ano == 2019] #(in %)
 
 # Lambda = Decline in MMR attributable to safe motherhood initiatives
-BR.Decomp$Lambda[BR.Decomp$Ano == 2018] <- BR.Decomp$RMM_hat[BR.Decomp$Ano == 2018] - BR.Decomp$RMM.CT[BR.Decomp$Ano == 2018]
-BR.Decomp$Lambda.per[BR.Decomp$Ano == 2018] <- (BR.Decomp$Lambda[BR.Decomp$Ano == 2018] * 100) / BR.Decomp$Iota[BR.Decomp$Ano == 2018] #(in %)
+Decomp$Lambda[Decomp$Ano == 2019] <- Decomp$RMM_hat[Decomp$Ano == 2019] - Decomp$RMM.Ibge[Decomp$Ano == 2019]
+Decomp$Lambda.per[Decomp$Ano == 2019] <- (Decomp$Lambda[Decomp$Ano == 2019] * 100) / Decomp$Iota[Decomp$Ano == 2019] #(in %)
 
 
-# Sigma = Total decline in actual maternal deaths between 2000 and 2018
-BR.Decomp$Sigma[BR.Decomp$Ano == 2018] <- BR.Decomp$D.00[BR.Decomp$Ano == 2018] - BR.Decomp$D.18[BR.Decomp$Ano == 2018] 
-BR.Decomp$Sigma.per[BR.Decomp$Ano == 2018] <- 100 #(in %)
+# Sigma = Total decline in actual maternal deaths between 2009 and 2019
+Decomp$Sigma[Decomp$Ano == 2019] <- Decomp$D.09[Decomp$Ano == 2019] - Decomp$D.19[Decomp$Ano == 2019] 
+Decomp$Sigma.per[Decomp$Ano == 2019] <- 100 #(in %)
   
 # Tau = Attributable to fertility decline
-BR.Decomp$Tau[BR.Decomp$Ano == 2018] <-  BR.Decomp$D.00[BR.Decomp$Ano == 2018] - BR.Decomp$D_hat.18[BR.Decomp$Ano == 2018]
-BR.Decomp$Tau.per[BR.Decomp$Ano == 2018] <- (BR.Decomp$Tau[BR.Decomp$Ano == 2018] * 100) / BR.Decomp$Sigma[BR.Decomp$Ano == 2018] #(in %)
+Decomp$Tau[Decomp$Ano == 2019] <-  Decomp$D.09[Decomp$Ano == 2019] - Decomp$D_hat.19[Decomp$Ano == 2019]
+Decomp$Tau.per[Decomp$Ano == 2019] <- (Decomp$Tau[Decomp$Ano == 2019] * 100) / Decomp$Sigma[Decomp$Ano == 2019] #(in %)
 
 # Eta = Attributable to safe motherhood
-BR.Decomp$Eta[BR.Decomp$Ano == 2018] <- BR.Decomp$D_hat.18[BR.Decomp$Ano == 2018] - BR.Decomp$D.18[BR.Decomp$Ano == 2018]
-BR.Decomp$Eta.per[BR.Decomp$Ano == 2018] <- (BR.Decomp$Eta[BR.Decomp$Ano == 2018] * 100) / BR.Decomp$Sigma[BR.Decomp$Ano == 2018] #(in %)
+Decomp$Eta[Decomp$Ano == 2019] <- Decomp$D_hat.19[Decomp$Ano == 2019] - Decomp$D.19[Decomp$Ano == 2019]
+Decomp$Eta.per[Decomp$Ano == 2019] <- (Decomp$Eta[Decomp$Ano == 2019] * 100) / Decomp$Sigma[Decomp$Ano == 2019] #(in %)
+
+Decomp <- Decomp %>%
+  mutate(across(22:48, round, 3))
 
 
-teste <- BR.Decomp %>%
-  filter(Ano == 2018) %>%
-  t()
+################################
+## 2) Fazendo a mesma decomposição para todas as UFs em loop (2009-2019) ##
+
+UnidFed <- unique(TFT.2000.2019$sigla)
+
+datalist <- list()
+
+for (i in UnidFed) {
+
+  print(paste("Processing", i, sep = " "))
+  
+  Decomp <- TFT.2000.2019 %>%
+    filter(sigla == i,
+           Ano == 2009 | Ano == 2014 | Ano == 2019)  %>% 
+    select(Ano, Estado, UF, sigla, region, Pop, Women, Nascimentos, NV.Ajus.Gompertz.sem.P, 
+           TFT, Gompertz.sem.P, RMM, RMM.Obt.Corr, RMM.Ibge, RMM.Gompertz.sem.P) %>%
+    mutate(TBN = (Nascimentos/Pop) * 1000,
+           r = NA,
+           P_hat = NA, 
+           B_hat = NA,
+           B = NA,
+           D1_hat = NA,
+           D2_hat = NA,
+           D3_hat = NA,
+           D = NA,
+           X = NA,
+           Y = NA,
+           Z = NA)
+  
+  # r = Annual population growth rate: 2009-2014 and 2014-2019
+  Decomp$r[Decomp$Ano == 2014] <- ((log(Decomp$Pop[Decomp$Ano == 2014] / Decomp$Pop[Decomp$Ano == 2009])) / 10)
+  Decomp$r[Decomp$Ano == 2019] <- ((log(Decomp$Pop[Decomp$Ano == 2019] / Decomp$Pop[Decomp$Ano == 2014])) / 9)
+  
+  # P_hat = 2019 estimated population assuming constant annual growth rate from 2009-2014
+  Decomp$P_hat[Decomp$Ano == 2019] <- Decomp$Pop[Decomp$Ano == 2009] * (exp(19 * Decomp$r[Decomp$Ano == 2014]))
+  
+  # B_hat = Projected births in 2019 assuming constant fertility
+  Decomp$B_hat[Decomp$Ano == 2019] <- Decomp$P_hat[Decomp$Ano == 2019] * Decomp$TBN[Decomp$Ano == 2009] / 1000
+  
+  # B = Actual births in 2019 
+  Decomp$B[Decomp$Ano == 2019] <- Decomp$Nascimentos[Decomp$Ano == 2019]
+  #Decomp$B2[Decomp$Ano == 2019] <- Decomp$P_hat[Decomp$Ano == 2019] * Decomp$TBN[Decomp$Ano == 2019] / 1000
+  
+  
+  # D1_hat = No change in CBR and no change in MMR
+  Decomp$D1_hat[Decomp$Ano == 2019] <- Decomp$B_hat[Decomp$Ano == 2019] * Decomp$RMM.Ibge[Decomp$Ano == 2009] / 100000
+  
+  # D3_hat = MMR declined but CBR did not
+  Decomp$D3_hat[Decomp$Ano == 2019] <- Decomp$B_hat[Decomp$Ano == 2019] * Decomp$RMM.Ibge[Decomp$Ano == 2019] / 100000
+  
+  # D2_hat = CBR declined but MMR did not
+  Decomp$D2_hat[Decomp$Ano == 2019] <- Decomp$B[Decomp$Ano == 2019] * Decomp$RMM.Ibge[Decomp$Ano == 2009] / 100000
+  
+  # D = Both CBR and MMR declined
+  Decomp$D[Decomp$Ano == 2019] <- Decomp$B[Decomp$Ano == 2019] * Decomp$RMM.Ibge[Decomp$Ano == 2019] / 100000
+  
+  
+  # Y = Total effect of decline in MMR 
+  Decomp$Y <- Decomp$D1_hat - Decomp$D3_hat
+  
+  # X = Total effect of fertility decline
+  Decomp$X <- Decomp$D1_hat - Decomp$D2_hat
+  
+  # Z = Total effect of declines in both fertility and MMR
+  Decomp$Z <- Decomp$D1_hat - Decomp$D
+  
+  Decomp <- Decomp %>%
+    mutate(intersec.X.Y = X + Y - Z, # intersec.X.Y = Overlap between the effect of declines in fertility and in MMR
+           Alpha = Y - intersec.X.Y, # Alpha = Net effect of decline in MMR
+           Beta = X - intersec.X.Y, # Beta = Net effect of fertility decline
+           Gama = (Alpha / Z) * 100, # Gama = Effect of safe motherhood on the % of the  potential number of maternal lives saved in 2019
+           Delta = (Beta / Z) * 100, # Delta = Effect of decrease in live births on the % of the  potential number of maternal lives saved in 2019
+           Omega = (intersec.X.Y / Z) * 100) # Omega = Effect of fertility reduction realized through its effect on MMR reduction
+  
+  ##----------------------------------------------------------------------------------------------------------
+  
+  ### Estimation of the decline in maternal mortality ratio and number of actual maternal deaths attributable to fertility decline ###
+  
+  Decomp <- Decomp %>%
+    mutate(RMM_hat = NA,
+           D.09 = NA,
+           D.19 = NA, 
+           D_hat.19 = NA,
+           Iota = NA,
+           Kappa = NA,
+           Lambda = NA,
+           Iota.per = NA,
+           Kappa.per = NA,
+           Lambda.per = NA,
+           Sigma = NA,
+           Tau = NA,
+           Eta = NA,
+           Sigma.per = NA,
+           Tau.per = NA,
+           Eta.per = NA)
+  
+  # RMM_hat = MMR in 2019 implied by fertility reduction observed during 2009-2019
+  Decomp$RMM_hat[Decomp$Ano == 2019] <- Decomp$RMM.Ibge[Decomp$Ano == 2019] + 
+    ((Decomp$B[Decomp$Ano == 2019] / Decomp$B_hat[Decomp$Ano == 2019]) *
+       (Decomp$RMM.Ibge[Decomp$Ano == 2009] - Decomp$RMM.Ibge[Decomp$Ano == 2019]))
+  
+  # D.09 = Maternal deaths in 2009
+  Decomp$D.09[Decomp$Ano == 2019] <- (Decomp$Nascimentos[Decomp$Ano == 2009] * Decomp$RMM.Ibge[Decomp$Ano == 2009]) / 100000
+  
+  # D.19 = Maternal deaths in 2019
+  Decomp$D.19[Decomp$Ano == 2019] <- (Decomp$Nascimentos[Decomp$Ano == 2019] * Decomp$RMM.Ibge[Decomp$Ano == 2019]) / 100000
+  
+  # D_hat.19 = Maternal deaths in 2019 implied by fertility decline observed between 2009 and 2019
+  Decomp$D_hat.19[Decomp$Ano == 2019] <- (Decomp$Nascimentos[Decomp$Ano == 2019] *  Decomp$RMM_hat[Decomp$Ano == 2019]) / 100000
+  
+  
+  # Iota = Total decline in MMR between 1990 and 2008 
+  Decomp$Iota[Decomp$Ano == 2019] <- Decomp$RMM.Ibge[Decomp$Ano == 2009] - Decomp$RMM.Ibge[Decomp$Ano == 2019]
+  Decomp$Iota.per[Decomp$Ano == 2019] <- 100 #(in %)
+  
+  # Kappa = Decline in MMR attributable to fertility reduction
+  Decomp$Kappa[Decomp$Ano == 2019] <- Decomp$RMM.Ibge[Decomp$Ano == 2009] - Decomp$RMM_hat[Decomp$Ano == 2019]
+  Decomp$Kappa.per[Decomp$Ano == 2019] <- (Decomp$Kappa[Decomp$Ano == 2019] * 100) / Decomp$Iota[Decomp$Ano == 2019] #(in %)
+  
+  # Lambda = Decline in MMR attributable to safe motherhood initiatives
+  Decomp$Lambda[Decomp$Ano == 2019] <- Decomp$RMM_hat[Decomp$Ano == 2019] - Decomp$RMM.Ibge[Decomp$Ano == 2019]
+  Decomp$Lambda.per[Decomp$Ano == 2019] <- (Decomp$Lambda[Decomp$Ano == 2019] * 100) / Decomp$Iota[Decomp$Ano == 2019] #(in %)
+  
+  
+  # Sigma = Total decline in actual maternal deaths between 2009 and 2019
+  Decomp$Sigma[Decomp$Ano == 2019] <- Decomp$D.09[Decomp$Ano == 2019] - Decomp$D.19[Decomp$Ano == 2019] 
+  Decomp$Sigma.per[Decomp$Ano == 2019] <- 100 #(in %)
+  
+  # Tau = Attributable to fertility decline
+  Decomp$Tau[Decomp$Ano == 2019] <-  Decomp$D.09[Decomp$Ano == 2019] - Decomp$D_hat.19[Decomp$Ano == 2019]
+  Decomp$Tau.per[Decomp$Ano == 2019] <- (Decomp$Tau[Decomp$Ano == 2019] * 100) / Decomp$Sigma[Decomp$Ano == 2019] #(in %)
+  
+  # Eta = Attributable to safe motherhood
+  Decomp$Eta[Decomp$Ano == 2019] <- Decomp$D_hat.19[Decomp$Ano == 2019] - Decomp$D.19[Decomp$Ano == 2019]
+  Decomp$Eta.per[Decomp$Ano == 2019] <- (Decomp$Eta[Decomp$Ano == 2019] * 100) / Decomp$Sigma[Decomp$Ano == 2019] #(in %)
+  
+  dat <- Decomp %>%
+    filter(Ano == 2019) %>%
+    mutate(across(22:48, round, 3))
+  
+  datalist[[i]] <- dat # add it to your list
+}
+
+Decomp <- do.call(rbind, datalist)
+
+
+rm(datalist, dat)
+
+##----------------------------------------------------------------------------------------------------------
+
+### Criando uma tabela resumo ###
+# estado <- c("Brasil", "Rondônia", "Acre", 'Amazonas',
+#            'Roraima', 'Pará', 'Amapá', 'Tocantins', 'Maranhão', 'Piauí',
+#            'Ceará', "Rio Grande do Norte", 'Paraíba', 'Pernambuco',
+#            'Alagoas', 'Sergipe', 'Bahia', "Minas Gerais", "Espírito Santo",
+#            "Rio de Janeiro", "São Paulo", 'Paraná', "Santa Catarina",
+#            "Rio Grande do Sul", "Mato Grosso do Sul",  "Mato Grosso",
+#            'Goiás', "Distrito Federal")
+
+estado <- c("BR","RO","AC","AM","RR","PA","AP","TO","MA","PI","CE","RN","PB","PE","AL","SE",
+           "BA","MG","ES","RJ","SP","PR","SC","RS","MS","MT","GO","DF")
+
+
+tab <- Decomp %>%
+  select(sigla, RMM.Ibge, 16:49) %>%
+  rename(RMM = RMM.Ibge) %>%
+  pivot_longer(-sigla) %>% 
+  pivot_wider(names_from = sigla, values_from = value) %>%
+  left_join(description, by = "name") %>%
+  ungroup() %>%
+  select(name, description, "BR","RO","AC","AM","RR","PA","AP","TO","MA","PI","CE","RN","PB","PE","AL","SE",
+         "BA","MG","ES","RJ","SP","PR","SC","RS","MS","MT","GO","DF") %>%
+  gt() %>%
+  tab_header(title = md("**Decomposição Jain (2011) por UF - 2009-2019**")) %>%
+  cols_label(name = "Variable",
+             description = "Description") %>% 
+  tab_source_note(source_note = "Jain, A. K. (2011). Measuring the Effect of Fertility Decline on the Maternal Mortality Ratio. Studies in Family Planning, 42(4), 247–260") %>%
+  fmt_number(columns = all_of(estado),
+              decimals = 2) %>%
+  fmt_number(columns = all_of(estado),
+             rows = 4:6,
+             scale_by = 1/1000,
+             decimals = 2) %>%
+  tab_style(
+    locations = cells_column_labels(columns = everything()),
+    style     = list(
+      cell_borders(sides = "bottom", weight = px(3)), #Give a thick border below
+      cell_text(weight = "bold", size = px(13))))  %>%
+  tab_footnote(
+    footnote = "Em milhares",
+    locations = cells_body(columns = c(name, description), rows = 4:6)) %>%
+  tab_style(
+    style = cell_text(size = px(12)),
+    locations = cells_body(columns = everything())) %>%
+  tab_style(locations =  cells_body(columns ="name"),
+            style = cell_text(weight = "bold")) %>%
+  cols_width(starts_with("Description") ~ px(1300))  %>% 
+  cols_align(align = "center", columns = all_of(estado))
+
+tab %>%
+  gtsave("tabela decomposicao UF (2009-2019).html", inline_css = TRUE)
+
+teste <- Decomp %>%
+  filter(Ano == 2019) %>%
+  t() %>%
+  as.data.frame()
