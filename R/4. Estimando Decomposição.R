@@ -477,7 +477,7 @@ Decomp$D.19[Decomp$Ano == 2019] <- (Decomp$Nascimentos[Decomp$Ano == 2019] * Dec
 Decomp$D_hat.19[Decomp$Ano == 2019] <- (Decomp$Nascimentos[Decomp$Ano == 2019] *  Decomp$RMM_hat[Decomp$Ano == 2019]) / 100000
 
 
-# Iota = Total decline in MMR between 1990 and 2008 
+# Iota = Total decline in MMR between 2009 and 2019
 Decomp$Iota[Decomp$Ano == 2019] <- Decomp$RMM.Ibge[Decomp$Ano == 2009] - Decomp$RMM.Ibge[Decomp$Ano == 2019]
 Decomp$Iota.per[Decomp$Ano == 2019] <- 100 #(in %)
 
@@ -617,7 +617,7 @@ for (i in UnidFed) {
   Decomp$D_hat.19[Decomp$Ano == 2019] <- (Decomp$Nascimentos[Decomp$Ano == 2019] *  Decomp$RMM_hat[Decomp$Ano == 2019]) / 100000
   
   
-  # Iota = Total decline in MMR between 1090 and 2019 
+  # Iota = Total decline in MMR between 2009 and 2019
   Decomp$Iota[Decomp$Ano == 2019] <- Decomp$RMM.Ibge[Decomp$Ano == 2009] - Decomp$RMM.Ibge[Decomp$Ano == 2019]
   Decomp$Iota.per[Decomp$Ano == 2019] <- 100 #(in %)
   
@@ -695,7 +695,7 @@ tab <- Decomp.09.19 %>%
   rename(RMM = RMM.Ibge) %>%
   pivot_longer(-sigla) %>% 
   pivot_wider(names_from = sigla, values_from = value) %>%
-  left_join(description, by = "name") %>% ## ATENCAO AS DESCRICOES E NOME
+  left_join(description, by = "name") %>% 
   ungroup() %>%
   select(name, description, "BR","RO","AC","AM","RR","PA","AP","TO","MA","PI","CE","RN","PB","PE","AL","SE",
          "BA","MG","ES","RJ","SP","PR","SC","RS","MS","MT","GO","DF") %>%
