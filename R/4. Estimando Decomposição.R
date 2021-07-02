@@ -30,7 +30,7 @@ library(fertestr)
 ## Importando os dados
 Pop.00.30 <- read.csv('data/Pop 00-30.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
 Obitos.maternos2000.2019 <- read.csv('data/Prop Obitos Maternos 2000-2019.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
-Fec.proj.20.40 <- read.csv('data/Projecao Fec 2020-2040.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
+#Fec.proj.20.40 <- read.csv('data/Projecao Fec 2020-2040.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
 RMM.ibge.09.18 <- read.csv('data/RMM IBGE 2009-2018.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
 description <- read.csv('data/description decomp.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
 
@@ -232,6 +232,8 @@ RMM.ibge.09.18 <- RMM.ibge.09.18 %>%
 
 ## Calculando a TEF por diferentes métodos para UFs
 
+# Para obter os dados de fecundidade usados neste script, primeiro rode o "Criando SINASC fecundidade 2000-2019.R"
+
 ## 1) Gompertz ##
 novo <- NULL
 TEF.2000.2019 <- NULL
@@ -349,9 +351,11 @@ TFT.2000.2019 <- TFT.2000.2019 %>%
           if(is.na(x[i]) & Ano[i] > 2018)
             x[i] <- ratio[Ano == 2018] * RMM[Ano == 2018]
           
-          else if(is.na(x[i]) & Ano[i] < 2018)
+          else if(is.na(x[i]) & Ano[i] < 2018 & Ano[i] > 2008)
             x[i] <- x[i]
           
+          else if(is.na(x[i]) & Ano[i] <= 2008)
+            x[i] <- RMM[i]
         }
         return(x)
       } ) # end of function spec
@@ -370,6 +374,7 @@ TFT.2000.2019 <- TFT.2000.2019 %>%
 ## 1) Juntando as bases de populacao total e TFT ##
 TFT.2000.2019 <- TFT.2000.2019 %>%
   left_join(Pop.00.30, by = c("Ano", "sigla", "UF", "Estado", "region")) 
+
 
 ## 2) Usando os dados do BR ##
 Decomp <- TFT.2000.2019 %>%
@@ -391,8 +396,8 @@ Decomp <- TFT.2000.2019 %>%
          Z = NA)
 
 # r = Annual population growth rate: 2009-2014 and 2014-2019
-Decomp$r[Decomp$Ano == 2014] <- ((log(Decomp$Pop[Decomp$Ano == 2014] / Decomp$Pop[Decomp$Ano == 2009])) / 10)
-Decomp$r[Decomp$Ano == 2019] <- ((log(Decomp$Pop[Decomp$Ano == 2019] / Decomp$Pop[Decomp$Ano == 2014])) / 9)
+Decomp$r[Decomp$Ano == 2014] <- ((log(Decomp$Pop[Decomp$Ano == 2014] / Decomp$Pop[Decomp$Ano == 2009])) / (2014 - 2009))
+Decomp$r[Decomp$Ano == 2019] <- ((log(Decomp$Pop[Decomp$Ano == 2019] / Decomp$Pop[Decomp$Ano == 2014])) / (2019 - 2014))
 
 # P_hat = 2019 estimated population assuming constant annual growth rate from 2009-2014
 Decomp$P_hat[Decomp$Ano == 2019] <- Decomp$Pop[Decomp$Ano == 2009] * (exp(19 * Decomp$r[Decomp$Ano == 2014]))
@@ -531,11 +536,11 @@ for (i in UnidFed) {
            Z = NA)
   
   # r = Annual population growth rate: 2009-2014 and 2014-2019
-  Decomp$r[Decomp$Ano == 2014] <- ((log(Decomp$Pop[Decomp$Ano == 2014] / Decomp$Pop[Decomp$Ano == 2009])) / 10)
-  Decomp$r[Decomp$Ano == 2019] <- ((log(Decomp$Pop[Decomp$Ano == 2019] / Decomp$Pop[Decomp$Ano == 2014])) / 9)
+  Decomp$r[Decomp$Ano == 2014] <- ((log(Decomp$Pop[Decomp$Ano == 2014] / Decomp$Pop[Decomp$Ano == 2009])) / (2014 - 2009))
+  Decomp$r[Decomp$Ano == 2019] <- ((log(Decomp$Pop[Decomp$Ano == 2019] / Decomp$Pop[Decomp$Ano == 2014])) / (2019 - 2014))
   
   # P_hat = 2019 estimated population assuming constant annual growth rate from 2009-2014
-  Decomp$P_hat[Decomp$Ano == 2019] <- Decomp$Pop[Decomp$Ano == 2009] * (exp(19 * Decomp$r[Decomp$Ano == 2014]))
+  Decomp$P_hat[Decomp$Ano == 2019] <- Decomp$Pop[Decomp$Ano == 2009] * (exp(10 * Decomp$r[Decomp$Ano == 2014]))
   
   # B_hat = Projected births in 2019 assuming constant fertility
   Decomp$B_hat[Decomp$Ano == 2019] <- Decomp$P_hat[Decomp$Ano == 2019] * Decomp$TBN[Decomp$Ano == 2009] / 1000
@@ -612,7 +617,7 @@ for (i in UnidFed) {
   Decomp$D_hat.19[Decomp$Ano == 2019] <- (Decomp$Nascimentos[Decomp$Ano == 2019] *  Decomp$RMM_hat[Decomp$Ano == 2019]) / 100000
   
   
-  # Iota = Total decline in MMR between 1990 and 2008 
+  # Iota = Total decline in MMR between 1090 and 2019 
   Decomp$Iota[Decomp$Ano == 2019] <- Decomp$RMM.Ibge[Decomp$Ano == 2009] - Decomp$RMM.Ibge[Decomp$Ano == 2019]
   Decomp$Iota.per[Decomp$Ano == 2019] <- 100 #(in %)
   
@@ -649,9 +654,16 @@ Decomp <- do.call(rbind, datalist)
 
 rm(datalist, dat)
 
+
+Decomp.09.19 <- Decomp
+#Decomp.00.19 <- Decomp
+#Decomp.00.10 <- Decomp
+#Decomp.00.08 <- Decomp
+
 ##----------------------------------------------------------------------------------------------------------
 
 ### Criando uma tabela resumo ###
+
 # estado <- c("Brasil", "Rondônia", "Acre", 'Amazonas',
 #            'Roraima', 'Pará', 'Amapá', 'Tocantins', 'Maranhão', 'Piauí',
 #            'Ceará', "Rio Grande do Norte", 'Paraíba', 'Pernambuco',
@@ -663,13 +675,27 @@ rm(datalist, dat)
 estado <- c("BR","RO","AC","AM","RR","PA","AP","TO","MA","PI","CE","RN","PB","PE","AL","SE",
            "BA","MG","ES","RJ","SP","PR","SC","RS","MS","MT","GO","DF")
 
+# DESCRICOES DAS VARIAVEIS
+description.00.19 <- description %>%
+  mutate(name = gsub("09", "00", name),
+         description = gsub("2009", "2000", description))
+  
 
-tab <- Decomp %>%
+description.00.10 <- description.00.19 %>%
+  mutate(name = gsub("19", "10", name),
+         description = gsub("2019", "2010", description))
+
+description.00.08 <- description.00.19 %>%
+  mutate(name = gsub("19", "08", name),
+         description = gsub("2019", "2008", description))
+
+# TABELA
+tab <- Decomp.09.19 %>%
   select(sigla, RMM.Ibge, 16:49) %>%
   rename(RMM = RMM.Ibge) %>%
   pivot_longer(-sigla) %>% 
   pivot_wider(names_from = sigla, values_from = value) %>%
-  left_join(description, by = "name") %>%
+  left_join(description, by = "name") %>% ## ATENCAO AS DESCRICOES E NOME
   ungroup() %>%
   select(name, description, "BR","RO","AC","AM","RR","PA","AP","TO","MA","PI","CE","RN","PB","PE","AL","SE",
          "BA","MG","ES","RJ","SP","PR","SC","RS","MS","MT","GO","DF") %>%
@@ -700,6 +726,7 @@ tab <- Decomp %>%
   cols_width(starts_with("Description") ~ px(1300))  %>% 
   cols_align(align = "center", columns = all_of(estado))
 
+# SALVANDO TABELA
 tab %>%
   gtsave("tabela decomposicao UF (2009-2019).html", inline_css = TRUE)
 
@@ -707,3 +734,49 @@ teste <- Decomp %>%
   filter(Ano == 2019) %>%
   t() %>%
   as.data.frame()
+
+
+Decomp.09.19 %>%
+  select(sigla, Estado, UF, region, 16:49) %>%
+  arrange(Estado) %>%
+  mutate(diff = abs(Eta.per) - # Attributable to safe motherhood (in %)
+           abs(Tau.per), # Attributable to fertility decline (in %)
+         index = rep(seq(1, 28)),
+         # across("diff", ~(
+         #   function(x) {
+         #     for(i in 1:length(x))
+         #     {
+         #       if(Estado[i] == 53)
+         #         x[i] <- abs(Eta.per[Estado == 53]) - Tau.per[Estado == 53]
+         # 
+         #       else
+         #         x[i] <- x[i]
+         #     }
+         #     return(x)
+         #   } ) # end of function spec
+         #   (.) ) # end of across spec
+         ) %>%
+  #View()
+  ggplot(aes(x = diff, y = index, group = Estado, color = region)) + 
+  geom_point(size = 6, alpha = 0.60) +
+  geom_segment(aes(x = 0, xend = diff, y = index, yend = index), color = 'darkgrey') +
+  geom_hline(yintercept = c(7, 16, 20, 23, 27) + 0.50, lwd = 0.95, linetype = "dashed", col = 'grey') +
+  geom_vline(xintercept = 0, lwd = 1, col = 'black') +
+  geom_text(aes(x = diff, y = index + 0.05, label = sigla), color = 'black', size = 3.5, fontface = 'bold') + 
+  labs(title = "Decomposição Jain (2011) por UF - 2009-2019",
+       caption = "ESSE É UM TESTE A INTERPRETAÇAO DESSES RESULTADOS AINDA É INCERTA!!!",
+       x = '', 
+       y = '') + 
+  guides(color = "none", size = "none") +
+  theme_bw() +
+  scale_y_continuous(breaks = NULL, limits = c(0.5, 30.5)) +
+  scale_x_continuous(breaks = seq(-100, 100, by = 20), limits = c(-100.5, 100.5)) +
+  geom_text(label = 'Safe Motherhood', aes(x = 60, y = 30.5, vjust = 'center', 
+                                 size = 3), color = 'black') +
+  geom_text(label = 'Fertility', aes(x = -60, y = 30.5, vjust = 'center', 
+                                    size = 3), color = 'black') +
+  theme(panel.grid.minor = element_blank(),
+        plot.title = element_text(color = "grey20", size = 15, hjust = 0.5, face = "bold"),
+        # panel.border = element_blank(), 
+        # axis.line = element_line()
+)
