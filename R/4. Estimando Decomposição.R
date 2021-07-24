@@ -3,6 +3,7 @@
 # Build under R version 4.1.0
 
 options(scipen = 9999)
+source("Funcoes.r")
 
 ## Pacotes
 .packages = c("devtools", "stringr", "foreign", "Hmisc",
@@ -32,7 +33,8 @@ Pop.00.30 <- read.csv('data/Pop 00-30.csv', dec = ",", header = TRUE, stringsAsF
 Obitos.maternos2000.2019 <- read.csv('data/Prop Obitos Maternos 2000-2019.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
 #Fec.proj.20.40 <- read.csv('data/Projecao Fec 2020-2040.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
 RMM.ibge.09.18 <- read.csv('data/RMM IBGE 2009-2018.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
-description <- read.csv('data/description decomp.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
+#description <- read.csv('data/description decomp.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
+description.new <- read.csv('data/description decomp - func.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
 
 ##----------------------------------------------------------------------------------------------------------
 
@@ -507,158 +509,46 @@ Decomp <- Decomp %>%
 
 
 ################################
-## 2) Fazendo a mesma decomposição para todas as UFs em loop (2009-2019) ##
+## 2) Fazendo a mesma decomposição para todas as UFs em loop (2009-2019) - COM AJUSTES ##
 
 UnidFed <- unique(TFT.2000.2019$sigla)
 
 datalist <- list()
 
 for (i in UnidFed) {
-
+  
   print(paste("Processing", i, sep = " "))
   
-  Decomp <- TFT.2000.2019 %>%
-    filter(sigla == i,
-           Ano == 2009 | Ano == 2014 | Ano == 2019)  %>% 
-    select(Ano, Estado, UF, sigla, region, Pop, Women, Nascimentos, NV.Ajus.Gompertz.sem.P, 
-           TFT, Gompertz.sem.P, RMM, RMM.Obt.Corr, RMM.Ibge, RMM.Gompertz.sem.P) %>%
-    mutate(TBN = (Nascimentos/Pop) * 1000,
-           r = NA,
-           P_hat = NA, 
-           B_hat = NA,
-           B = NA,
-           D1_hat = NA,
-           D2_hat = NA,
-           D3_hat = NA,
-           D = NA,
-           X = NA,
-           Y = NA,
-           Z = NA)
-  
-  # r = Annual population growth rate: 2009-2014 and 2014-2019
-  Decomp$r[Decomp$Ano == 2014] <- ((log(Decomp$Pop[Decomp$Ano == 2014] / Decomp$Pop[Decomp$Ano == 2009])) / (2014 - 2009))
-  Decomp$r[Decomp$Ano == 2019] <- ((log(Decomp$Pop[Decomp$Ano == 2019] / Decomp$Pop[Decomp$Ano == 2014])) / (2019 - 2014))
-  
-  # P_hat = 2019 estimated population assuming constant annual growth rate from 2009-2014
-  Decomp$P_hat[Decomp$Ano == 2019] <- Decomp$Pop[Decomp$Ano == 2009] * (exp(10 * Decomp$r[Decomp$Ano == 2014]))
-  
-  # B_hat = Projected births in 2019 assuming constant fertility
-  Decomp$B_hat[Decomp$Ano == 2019] <- Decomp$P_hat[Decomp$Ano == 2019] * Decomp$TBN[Decomp$Ano == 2009] / 1000
-  
-  # B = Actual births in 2019 
-  Decomp$B[Decomp$Ano == 2019] <- Decomp$Nascimentos[Decomp$Ano == 2019]
-  #Decomp$B2[Decomp$Ano == 2019] <- Decomp$P_hat[Decomp$Ano == 2019] * Decomp$TBN[Decomp$Ano == 2019] / 1000
-  
-  
-  # D1_hat = No change in CBR and no change in MMR
-  Decomp$D1_hat[Decomp$Ano == 2019] <- Decomp$B_hat[Decomp$Ano == 2019] * Decomp$RMM.Ibge[Decomp$Ano == 2009] / 100000
-  
-  # D3_hat = MMR declined but CBR did not
-  Decomp$D3_hat[Decomp$Ano == 2019] <- Decomp$B_hat[Decomp$Ano == 2019] * Decomp$RMM.Ibge[Decomp$Ano == 2019] / 100000
-  
-  # D2_hat = CBR declined but MMR did not
-  Decomp$D2_hat[Decomp$Ano == 2019] <- Decomp$B[Decomp$Ano == 2019] * Decomp$RMM.Ibge[Decomp$Ano == 2009] / 100000
-  
-  # D = Both CBR and MMR declined
-  Decomp$D[Decomp$Ano == 2019] <- Decomp$B[Decomp$Ano == 2019] * Decomp$RMM.Ibge[Decomp$Ano == 2019] / 100000
-  
-  
-  # Y = Total effect of decline in MMR 
-  Decomp$Y <- Decomp$D1_hat - Decomp$D3_hat
-  
-  # X = Total effect of fertility decline
-  Decomp$X <- Decomp$D1_hat - Decomp$D2_hat
-  
-  # Z = Total effect of declines in both fertility and MMR
-  Decomp$Z <- Decomp$D1_hat - Decomp$D
-  
-  Decomp <- Decomp %>%
-    mutate(intersec.X.Y = X + Y - Z, # intersec.X.Y = Overlap between the effect of declines in fertility and in MMR
-           Alpha = Y - intersec.X.Y, # Alpha = Net effect of decline in MMR
-           Beta = X - intersec.X.Y, # Beta = Net effect of fertility decline
-           Gama = (Alpha / Z) * 100, # Gama = Effect of safe motherhood on the % of the  potential number of maternal lives saved in 2019
-           Delta = (Beta / Z) * 100, # Delta = Effect of decrease in live births on the % of the  potential number of maternal lives saved in 2019
-           Omega = (intersec.X.Y / Z) * 100) # Omega = Effect of fertility reduction realized through its effect on MMR reduction
-  
-  ##----------------------------------------------------------------------------------------------------------
-  
-  ### Estimation of the decline in maternal mortality ratio and number of actual maternal deaths attributable to fertility decline ###
-  
-  Decomp <- Decomp %>%
-    mutate(RMM_hat = NA,
-           D.09 = NA,
-           D.19 = NA, 
-           D_hat.19 = NA,
-           Iota = NA,
-           Kappa = NA,
-           Lambda = NA,
-           Iota.per = NA,
-           Kappa.per = NA,
-           Lambda.per = NA,
-           Sigma = NA,
-           Tau = NA,
-           Eta = NA,
-           Sigma.per = NA,
-           Tau.per = NA,
-           Eta.per = NA)
-  
-  # RMM_hat = MMR in 2019 implied by fertility reduction observed during 2009-2019
-  Decomp$RMM_hat[Decomp$Ano == 2019] <- Decomp$RMM.Ibge[Decomp$Ano == 2019] + 
-    ((Decomp$B[Decomp$Ano == 2019] / Decomp$B_hat[Decomp$Ano == 2019]) *
-       (Decomp$RMM.Ibge[Decomp$Ano == 2009] - Decomp$RMM.Ibge[Decomp$Ano == 2019]))
-  
-  # D.09 = Maternal deaths in 2009
-  Decomp$D.09[Decomp$Ano == 2019] <- (Decomp$Nascimentos[Decomp$Ano == 2009] * Decomp$RMM.Ibge[Decomp$Ano == 2009]) / 100000
-  
-  # D.19 = Maternal deaths in 2019
-  Decomp$D.19[Decomp$Ano == 2019] <- (Decomp$Nascimentos[Decomp$Ano == 2019] * Decomp$RMM.Ibge[Decomp$Ano == 2019]) / 100000
-  
-  # D_hat.19 = Maternal deaths in 2019 implied by fertility decline observed between 2009 and 2019
-  Decomp$D_hat.19[Decomp$Ano == 2019] <- (Decomp$Nascimentos[Decomp$Ano == 2019] *  Decomp$RMM_hat[Decomp$Ano == 2019]) / 100000
-  
-  
-  # Iota = Total decline in MMR between 2009 and 2019
-  Decomp$Iota[Decomp$Ano == 2019] <- Decomp$RMM.Ibge[Decomp$Ano == 2009] - Decomp$RMM.Ibge[Decomp$Ano == 2019]
-  Decomp$Iota.per[Decomp$Ano == 2019] <- 100 #(in %)
-  
-  # Kappa = Decline in MMR attributable to fertility reduction
-  Decomp$Kappa[Decomp$Ano == 2019] <- Decomp$RMM.Ibge[Decomp$Ano == 2009] - Decomp$RMM_hat[Decomp$Ano == 2019]
-  Decomp$Kappa.per[Decomp$Ano == 2019] <- (Decomp$Kappa[Decomp$Ano == 2019] * 100) / Decomp$Iota[Decomp$Ano == 2019] #(in %)
-  
-  # Lambda = Decline in MMR attributable to safe motherhood initiatives
-  Decomp$Lambda[Decomp$Ano == 2019] <- Decomp$RMM_hat[Decomp$Ano == 2019] - Decomp$RMM.Ibge[Decomp$Ano == 2019]
-  Decomp$Lambda.per[Decomp$Ano == 2019] <- (Decomp$Lambda[Decomp$Ano == 2019] * 100) / Decomp$Iota[Decomp$Ano == 2019] #(in %)
-  
-  
-  # Sigma = Total decline in actual maternal deaths between 2009 and 2019
-  Decomp$Sigma[Decomp$Ano == 2019] <- Decomp$D.09[Decomp$Ano == 2019] - Decomp$D.19[Decomp$Ano == 2019] 
-  Decomp$Sigma.per[Decomp$Ano == 2019] <- 100 #(in %)
-  
-  # Tau = Attributable to fertility decline
-  Decomp$Tau[Decomp$Ano == 2019] <-  Decomp$D.09[Decomp$Ano == 2019] - Decomp$D_hat.19[Decomp$Ano == 2019]
-  Decomp$Tau.per[Decomp$Ano == 2019] <- (Decomp$Tau[Decomp$Ano == 2019] * 100) / Decomp$Sigma[Decomp$Ano == 2019] #(in %)
-  
-  # Eta = Attributable to safe motherhood
-  Decomp$Eta[Decomp$Ano == 2019] <- Decomp$D_hat.19[Decomp$Ano == 2019] - Decomp$D.19[Decomp$Ano == 2019]
-  Decomp$Eta.per[Decomp$Ano == 2019] <- (Decomp$Eta[Decomp$Ano == 2019] * 100) / Decomp$Sigma[Decomp$Ano == 2019] #(in %)
-  
-  dat <- Decomp %>%
-    filter(Ano == 2019) %>%
-    mutate(across(22:48, round, 3))
-  
+  dat <- Decomp.MMR(TFT.2000.2019, 2009, 2014, 2019, i, ajuste = T)
   datalist[[i]] <- dat # add it to your list
+  
 }
 
-Decomp <- do.call(rbind, datalist)
+Decomp.com <- do.call(rbind, datalist)
 
 
 rm(datalist, dat)
 
+################################
+## 3) Fazendo a mesma decomposição para todas as UFs em loop (2009-2019) - SEM AJUSTES ##
 
-Decomp.09.19 <- Decomp
-#Decomp.00.19 <- Decomp
-#Decomp.00.10 <- Decomp
-#Decomp.00.08 <- Decomp
+UnidFed <- unique(TFT.2000.2019$sigla)
+
+datalist <- list()
+
+for (i in UnidFed) {
+  
+  print(paste("Processing", i, sep = " "))
+  
+  dat <- Decomp.MMR(TFT.2000.2019, 2009, 2014, 2019, i, ajuste = F)
+  datalist[[i]] <- dat # add it to your list
+  
+}
+
+Decomp.sem <- do.call(rbind, datalist)
+
+
+rm(datalist, dat)
 
 ##----------------------------------------------------------------------------------------------------------
 
@@ -675,32 +565,23 @@ Decomp.09.19 <- Decomp
 estado <- c("BR","RO","AC","AM","RR","PA","AP","TO","MA","PI","CE","RN","PB","PE","AL","SE",
            "BA","MG","ES","RJ","SP","PR","SC","RS","MS","MT","GO","DF")
 
-# DESCRICOES DAS VARIAVEIS
-description.00.19 <- description %>%
-  mutate(name = gsub("09", "00", name),
-         description = gsub("2009", "2000", description))
-  
+################################
 
-description.00.10 <- description.00.19 %>%
-  mutate(name = gsub("19", "10", name),
-         description = gsub("2019", "2010", description))
-
-description.00.08 <- description.00.19 %>%
-  mutate(name = gsub("19", "08", name),
-         description = gsub("2019", "2008", description))
-
-# TABELA
-tab <- Decomp.09.19 %>%
-  select(sigla, RMM.Ibge, 16:49) %>%
+# 1) TABELA DE DECOMPOSIÇÃO COM AJUSTE
+tab <- Decomp %>%
+  select(sigla, RMM.Ibge, TBN, r, P_hat, B_hat, B, D1_hat, D2_hat, 
+         D3_hat, D, X, Y, Z, intersec.X.Y, Alpha, Beta, Gama, Delta, Omega, RMM_hat, 
+         D.ano1, D.ano2, D_hat.ano2, Iota, Kappa, Lambda, Iota.per, Kappa.per, Lambda.per, 
+         Sigma, Tau, Eta, Sigma.per, Tau.per, Eta.per) %>%
   rename(RMM = RMM.Ibge) %>%
   pivot_longer(-sigla) %>% 
   pivot_wider(names_from = sigla, values_from = value) %>%
-  left_join(description, by = "name") %>% 
+  left_join(description.new, by = "name") %>% 
   ungroup() %>%
   select(name, description, "BR","RO","AC","AM","RR","PA","AP","TO","MA","PI","CE","RN","PB","PE","AL","SE",
          "BA","MG","ES","RJ","SP","PR","SC","RS","MS","MT","GO","DF") %>%
   gt() %>%
-  tab_header(title = md("**Decomposição Jain (2011) por UF - 2009-2019**")) %>%
+  tab_header(title = md("**Decomposição Jain (2011) por UF - Com Ajustes - 2009-2019**")) %>%
   cols_label(name = "Variable",
              description = "Description") %>% 
   tab_source_note(source_note = "Jain, A. K. (2011). Measuring the Effect of Fertility Decline on the Maternal Mortality Ratio. Studies in Family Planning, 42(4), 247–260") %>%
@@ -730,53 +611,82 @@ tab <- Decomp.09.19 %>%
 tab %>%
   gtsave("tabela decomposicao UF (2009-2019).html", inline_css = TRUE)
 
-teste <- Decomp %>%
-  filter(Ano == 2019) %>%
-  t() %>%
-  as.data.frame()
+################################
 
+# 2) TABELA DE DECOMPOSIÇÃO SEM AJUSTE
+tab <- Decomp %>%
+  select(sigla, RMM, TBN, r, P_hat, B_hat, B, D1_hat, D2_hat, 
+         D3_hat, D, X, Y, Z, intersec.X.Y, Alpha, Beta, Gama, Delta, Omega, RMM_hat, 
+         D.ano1, D.ano2, D_hat.ano2, Iota, Kappa, Lambda, Iota.per, Kappa.per, Lambda.per, 
+         Sigma, Tau, Eta, Sigma.per, Tau.per, Eta.per) %>%
+  pivot_longer(-sigla) %>% 
+  pivot_wider(names_from = sigla, values_from = value) %>%
+  left_join(description.new, by = "name") %>% 
+  ungroup() %>%
+  select(name, description, "BR","RO","AC","AM","RR","PA","AP","TO","MA","PI","CE","RN","PB","PE","AL","SE",
+         "BA","MG","ES","RJ","SP","PR","SC","RS","MS","MT","GO","DF") %>%
+  gt() %>%
+  tab_header(title = md("**Decomposição Jain (2011) por UF - Sem Ajustes - 2009-2019**")) %>%
+  cols_label(name = "Variable",
+             description = "Description") %>% 
+  tab_source_note(source_note = "Jain, A. K. (2011). Measuring the Effect of Fertility Decline on the Maternal Mortality Ratio. Studies in Family Planning, 42(4), 247–260") %>%
+  fmt_number(columns = all_of(estado),
+             decimals = 2) %>%
+  fmt_number(columns = all_of(estado),
+             rows = 4:6,
+             scale_by = 1/1000,
+             decimals = 2) %>%
+  tab_style(
+    locations = cells_column_labels(columns = everything()),
+    style     = list(
+      cell_borders(sides = "bottom", weight = px(3)), #Give a thick border below
+      cell_text(weight = "bold", size = px(13))))  %>%
+  tab_footnote(
+    footnote = "Em milhares",
+    locations = cells_body(columns = c(name, description), rows = 4:6)) %>%
+  tab_style(
+    style = cell_text(size = px(12)),
+    locations = cells_body(columns = everything())) %>%
+  tab_style(locations =  cells_body(columns ="name"),
+            style = cell_text(weight = "bold")) %>%
+  cols_width(starts_with("Description") ~ px(1300))  %>% 
+  cols_align(align = "center", columns = all_of(estado))
 
-Decomp.09.19 %>%
-  select(sigla, Estado, UF, region, 16:49) %>%
-  arrange(Estado) %>%
-  mutate(diff = abs(Eta.per) - # Attributable to safe motherhood (in %)
-           abs(Tau.per), # Attributable to fertility decline (in %)
-         index = rep(seq(1, 28)),
-         # across("diff", ~(
-         #   function(x) {
-         #     for(i in 1:length(x))
-         #     {
-         #       if(Estado[i] == 53)
-         #         x[i] <- abs(Eta.per[Estado == 53]) - Tau.per[Estado == 53]
-         # 
-         #       else
-         #         x[i] <- x[i]
-         #     }
-         #     return(x)
-         #   } ) # end of function spec
-         #   (.) ) # end of across spec
-         ) %>%
-  #View()
-  ggplot(aes(x = diff, y = index, group = Estado, color = region)) + 
-  geom_point(size = 6, alpha = 0.60) +
-  geom_segment(aes(x = 0, xend = diff, y = index, yend = index), color = 'darkgrey') +
-  geom_hline(yintercept = c(7, 16, 20, 23, 27) + 0.50, lwd = 0.95, linetype = "dashed", col = 'grey') +
-  geom_vline(xintercept = 0, lwd = 1, col = 'black') +
-  geom_text(aes(x = diff, y = index + 0.05, label = sigla), color = 'black', size = 3.5, fontface = 'bold') + 
-  labs(title = "Decomposição Jain (2011) por UF - 2009-2019",
-       caption = "ESSE É UM TESTE A INTERPRETAÇAO DESSES RESULTADOS AINDA É INCERTA!!!",
-       x = '', 
-       y = '') + 
-  guides(color = "none", size = "none") +
-  theme_bw() +
-  scale_y_continuous(breaks = NULL, limits = c(0.5, 30.5)) +
-  scale_x_continuous(breaks = seq(-100, 100, by = 20), limits = c(-100.5, 100.5)) +
-  geom_text(label = 'Safe Motherhood', aes(x = 60, y = 30.5, vjust = 'center', 
-                                 size = 3), color = 'black') +
-  geom_text(label = 'Fertility', aes(x = -60, y = 30.5, vjust = 'center', 
-                                    size = 3), color = 'black') +
-  theme(panel.grid.minor = element_blank(),
-        plot.title = element_text(color = "grey20", size = 15, hjust = 0.5, face = "bold"),
-        # panel.border = element_blank(), 
-        # axis.line = element_line()
-)
+# SALVANDO TABELA
+tab %>%
+  gtsave("tabela decomposicao UF sem ajuste(2009-2019).html", inline_css = TRUE)
+
+################################
+
+## TESTE ##
+# Decomp.09.19 %>%
+#   select(sigla, Estado, UF, region, 16:49) %>%
+#   arrange(Estado) %>%
+#   mutate(diff = abs(Eta.per) - # Attributable to safe motherhood (in %)
+#            abs(Tau.per), # Attributable to fertility decline (in %)
+#          index = rep(seq(1, 28)),
+#          ) %>%
+#   #View()
+#   ggplot(aes(x = diff, y = index, group = Estado, color = region)) + 
+#   geom_point(size = 6, alpha = 0.60) +
+#   geom_segment(aes(x = 0, xend = diff, y = index, yend = index), color = 'darkgrey') +
+#   geom_hline(yintercept = c(7, 16, 20, 23, 27) + 0.50, lwd = 0.95, linetype = "dashed", col = 'grey') +
+#   geom_vline(xintercept = 0, lwd = 1, col = 'black') +
+#   geom_text(aes(x = diff, y = index + 0.05, label = sigla), color = 'black', size = 3.5, fontface = 'bold') + 
+#   labs(title = "Decomposição Jain (2011) por UF - 2009-2019",
+#        caption = "ESSE É UM TESTE A INTERPRETAÇAO DESSES RESULTADOS AINDA É INCERTA!!!",
+#        x = '', 
+#        y = '') + 
+#   guides(color = "none", size = "none") +
+#   theme_bw() +
+#   scale_y_continuous(breaks = NULL, limits = c(0.5, 30.5)) +
+#   scale_x_continuous(breaks = seq(-100, 100, by = 20), limits = c(-100.5, 100.5)) +
+#   geom_text(label = 'Safe Motherhood', aes(x = 60, y = 30.5, vjust = 'center', 
+#                                  size = 3), color = 'black') +
+#   geom_text(label = 'Fertility', aes(x = -60, y = 30.5, vjust = 'center', 
+#                                     size = 3), color = 'black') +
+#   theme(panel.grid.minor = element_blank(),
+#         plot.title = element_text(color = "grey20", size = 15, hjust = 0.5, face = "bold"),
+#         # panel.border = element_blank(), 
+#         # axis.line = element_line()
+# )

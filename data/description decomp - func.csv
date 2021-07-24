@@ -1,0 +1,36 @@
+name;description
+RMM;Maternal Mortality Ratio
+TBN;Crude Birth Rate
+r;Annual population growth rate
+P_hat;Final year's population estimated assuming constant annual growth rate through first year - mid-period
+B_hat;Projected births in the final year assuming constant fertility
+B;Actual births in the final year
+D1_hat;No change in CBR and no change in MMR
+D2_hat;CBR declined but MMR did not
+D3_hat;MMR declined but CBR did not
+D;Both CBR and MMR declined
+X;Total effect of fertility decline
+Y;Total effect of decline in MMR
+Z;Total effect of declines in both fertility and MMR
+intersec.X.Y;Overlap between the effect of declines in fertility and in MMR
+Alpha;Net effect of decline in MMR
+Beta;Net effect of fertility decline
+Gama;Effect of safe motherhood on the % of the  potential number of maternal lives saved in the final year
+Delta;Effect of decrease in live births on the % of the potential number of maternal lives saved on the final year
+Omega;Effect of fertility reduction realized through its effect on MMR reduction
+RMM_hat;final year's MMR implied by fertility reduction observed in the period
+D.ano1;Maternal deaths in the first year
+D.ano2;Maternal deaths in the final year
+D_hat.ano2;Maternal deaths in second year implied by fertility decline observed in the period
+Iota;Total decline in MMR during the overall period
+Kappa;Decline in MMR attributable to fertility reduction
+Lambda;Decline in MMR attributable to safe motherhood initiatives
+Iota.per;Total decline in MMR during the overall period
+Kappa.per;Decline in MMR attributable to fertility reduction (in %)
+Lambda.per;Decline in MMR attributable to safe motherhood initiatives (in %)
+Sigma;Total decline in actual maternal deaths during the overall period
+Tau;Attributable to fertility decline
+Eta;Attributable to safe motherhood
+Sigma.per;Total decline in actual maternal deaths during the overall period (in %)
+Tau.per;Attributable to fertility decline (in %)
+Eta.per;Attributable to safe motherhood (in %)
