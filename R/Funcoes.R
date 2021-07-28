@@ -316,9 +316,17 @@ Decomp.MMR <- function (data, ano1, meioperiodo, ano2, siglaUF, ajuste = T) {
     Decomp$Eta.per[Decomp$Ano == ano2] <- round((Decomp$Eta[Decomp$Ano == ano2] * 100) / 
                                                   Decomp$Sigma[Decomp$Ano == ano2], 3) #(in %)
     
-    Decomp <- Decomp %>%
+    Decomp <- Decomp %>% 
+      mutate_if(is.numeric, ~ replace_na(., 0) %>% 
+                  replace(., is.infinite(.), 0)) %>%
       filter(Ano == ano2) %>%
-      mutate(Ajuste = "FALSO",
+      mutate(Iota.per = ifelse(Iota == 0,
+                               0,
+                               100),
+             Sigma.per = ifelse(Sigma == 0,
+                                0,
+                                100),
+             Ajuste = "FALSO",
              Periodo = paste(ano1, meioperiodo, ano2, sep = "-")) %>%
       select(Ano, UF, Estado, sigla, region, Pop, Women, Nascimentos, TFT, RMM, RMM.Ibge, 
              RMM.Obt.Corr, RMM.Gompertz.sem.P, TBN, r, P_hat, B_hat, B, D1_hat, D2_hat, 
@@ -327,8 +335,8 @@ Decomp.MMR <- function (data, ano1, meioperiodo, ano2, siglaUF, ajuste = T) {
              Sigma, Tau, Eta, Sigma.per, Tau.per, Eta.per, Ajuste, Periodo)
     
   }  
-  
-  return(Decomp)
+    return(Decomp)
+
 }
 
 
@@ -346,18 +354,4 @@ correct.year <- function(x, year){
 
 ##----------------------------------------------------------------------------------------------------------
 
-datalist <- list()
 
-for (i in UnidFed) {
-  
-  print(paste("Processing", i, sep = " "))
-
-  dat <- Decomp.MMR(TFT.2000.2019, 2009, 2014, 2019, i, ajuste = T)
-  datalist[[i]] <- dat # add it to your list
-  
-}
-
-Decomp <- do.call(rbind, datalist)
-
-
-rm(datalist, dat)

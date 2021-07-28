@@ -3,7 +3,7 @@
 # Build under R version 4.1.0
 
 options(scipen = 9999)
-source("Funcoes.r")
+source("R/Funcoes.r")
 
 ## Pacotes
 .packages = c("devtools", "stringr", "foreign", "Hmisc",
@@ -36,6 +36,7 @@ RMM.ibge.09.18 <- read.csv('data/RMM IBGE 2009-2018.csv', dec = ",", header = TR
 #description <- read.csv('data/description decomp.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
 description.new <- read.csv('data/description decomp - func.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
 
+source("R/Funcoes.r")
 ##----------------------------------------------------------------------------------------------------------
 
 ## Organizando o Banco de Dados
@@ -378,6 +379,7 @@ TFT.2000.2019 <- TFT.2000.2019 %>%
   left_join(Pop.00.30, by = c("Ano", "sigla", "UF", "Estado", "region")) 
 
 
+################################
 ## 2) Usando os dados do BR ##
 Decomp <- TFT.2000.2019 %>%
   filter(sigla == "BR",
@@ -530,7 +532,43 @@ Decomp.com <- do.call(rbind, datalist)
 rm(datalist, dat)
 
 ################################
-## 3) Fazendo a mesma decomposição para todas as UFs em loop (2009-2019) - SEM AJUSTES ##
+## 3) Normalizando os resultados(2009-2019) - COM AJUSTES ##
+
+Decomp.com <- Decomp.com %>% 
+  mutate(
+    # norm.Iota = rescale(Iota), 
+    #      norm.Kappa = rescale(Kappa), 
+    #      norm.Lambda = rescale(Lambda), 
+         norm.Iota.per = 1,
+         norm.Kappa.per = scales::rescale(Kappa.per, to = c(0, 1)), 
+         norm.Lambda.per = scales::rescale(Lambda.per, to = c(0, 1)), 
+         # norm.Sigma = scales::rescale(Sigma), 
+         # norm.Tau = scales::rescale(Tau), 
+         # norm.Eta = scales::rescale(Eta),
+         norm.Sigma.per = 1,
+         norm.Tau.per = scales::rescale(Tau.per), 
+         norm.Eta.per = scales::rescale(Eta.per)
+         ) 
+
+# Testando uma escala de -1 a 1, mas nao deu certo
+# Decomp.com %>% 
+# mutate(norm.Iota = rescale(Iota, to = c(-1, 1)),
+#        norm.Kappa = rescale(Kappa, to = c(-1, 1)),
+#        norm.Lambda = rescale(Lambda, to = c(-1, 1)),
+#        norm.Iota.per = 1,
+#        norm.Kappa.per = scales::rescale(Kappa.per, to = c(-1, 1)),
+#        norm.Lambda.per = scales::rescale(Lambda.per, to = c(-1, 1)),
+#        norm.Sigma = scales::rescale(Sigma, to = c(-1, 1)),
+#        norm.Tau = scales::rescale(Tau, to = c(-1, 1)),
+#        norm.Eta = scales::rescale(Eta, to = c(-1, 1)),
+#        norm.Sigma.per = 1,
+#        norm.Tau.per = scales::rescale(Tau.per, to = c(-1, 1)), 
+#        norm.Eta.per = scales::rescale(Eta.per, to = c(-1, 1))) %>%
+#   View()
+
+################################
+
+## 4) Fazendo a mesma decomposição para todas as UFs em loop (2009-2019) - SEM AJUSTES ##
 
 UnidFed <- unique(TFT.2000.2019$sigla)
 
@@ -550,17 +588,27 @@ Decomp.sem <- do.call(rbind, datalist)
 
 rm(datalist, dat)
 
+################################
+## 5) Normalizando os resultados(2009-2019) - SEM AJUSTES ##
+
+Decomp.sem <- Decomp.sem %>% 
+  mutate(norm.Iota = rescale(Iota), 
+         norm.Kappa = rescale(Kappa), 
+         norm.Lambda = rescale(Lambda), 
+         norm.Iota.per = 1,
+         norm.Kappa.per = scales::rescale(Kappa.per, to = c(0, 1)), 
+         norm.Lambda.per = scales::rescale(Lambda.per, to = c(0, 1)), 
+         norm.Sigma = scales::rescale(Sigma), 
+         norm.Tau = scales::rescale(Tau), 
+         norm.Eta = scales::rescale(Eta),
+         norm.Sigma.per = 1,
+         norm.Tau.per = scales::rescale(Tau.per), 
+         norm.Eta.per = scales::rescale(Eta.per)) 
+
+
 ##----------------------------------------------------------------------------------------------------------
 
 ### Criando uma tabela resumo ###
-
-# estado <- c("Brasil", "Rondônia", "Acre", 'Amazonas',
-#            'Roraima', 'Pará', 'Amapá', 'Tocantins', 'Maranhão', 'Piauí',
-#            'Ceará', "Rio Grande do Norte", 'Paraíba', 'Pernambuco',
-#            'Alagoas', 'Sergipe', 'Bahia', "Minas Gerais", "Espírito Santo",
-#            "Rio de Janeiro", "São Paulo", 'Paraná', "Santa Catarina",
-#            "Rio Grande do Sul", "Mato Grosso do Sul",  "Mato Grosso",
-#            'Goiás', "Distrito Federal")
 
 estado <- c("BR","RO","AC","AM","RR","PA","AP","TO","MA","PI","CE","RN","PB","PE","AL","SE",
            "BA","MG","ES","RJ","SP","PR","SC","RS","MS","MT","GO","DF")
@@ -568,7 +616,8 @@ estado <- c("BR","RO","AC","AM","RR","PA","AP","TO","MA","PI","CE","RN","PB","PE
 ################################
 
 # 1) TABELA DE DECOMPOSIÇÃO COM AJUSTE
-tab <- Decomp %>%
+
+tab.com <- Decomp.com %>%
   select(sigla, RMM.Ibge, TBN, r, P_hat, B_hat, B, D1_hat, D2_hat, 
          D3_hat, D, X, Y, Z, intersec.X.Y, Alpha, Beta, Gama, Delta, Omega, RMM_hat, 
          D.ano1, D.ano2, D_hat.ano2, Iota, Kappa, Lambda, Iota.per, Kappa.per, Lambda.per, 
@@ -608,13 +657,14 @@ tab <- Decomp %>%
   cols_align(align = "center", columns = all_of(estado))
 
 # SALVANDO TABELA
-tab %>%
+tab.com %>%
   gtsave("tabela decomposicao UF (2009-2019).html", inline_css = TRUE)
 
 ################################
 
 # 2) TABELA DE DECOMPOSIÇÃO SEM AJUSTE
-tab <- Decomp %>%
+
+tab.sem <- Decomp.sem %>%
   select(sigla, RMM, TBN, r, P_hat, B_hat, B, D1_hat, D2_hat, 
          D3_hat, D, X, Y, Z, intersec.X.Y, Alpha, Beta, Gama, Delta, Omega, RMM_hat, 
          D.ano1, D.ano2, D_hat.ano2, Iota, Kappa, Lambda, Iota.per, Kappa.per, Lambda.per, 
@@ -653,40 +703,180 @@ tab <- Decomp %>%
   cols_align(align = "center", columns = all_of(estado))
 
 # SALVANDO TABELA
-tab %>%
-  gtsave("tabela decomposicao UF sem ajuste(2009-2019).html", inline_css = TRUE)
+tab.sem %>%
+  gtsave("tabela decomposicao UF sem ajuste (2009-2019).html", inline_css = TRUE)
 
 ################################
 
+# 3) TABELA DE DECOMPOSIÇÃO COM AJUSTE - NORMALIZADA
+
+tab.com.norm <- Decomp.com %>%
+  select(sigla, RMM.Ibge, TBN, r, P_hat, B_hat, B, D1_hat, D2_hat, 
+         D3_hat, D, X, Y, Z, intersec.X.Y, Alpha, Beta, Gama, Delta, Omega, RMM_hat, 
+         D.ano1, D.ano2, D_hat.ano2, norm.Iota, norm.Kappa, norm.Lambda, norm.Iota.per, norm.Kappa.per, 
+         norm.Lambda.per, norm.Sigma, norm.Tau, norm.Eta, norm.Sigma.per, norm.Tau.per, norm.Eta.per) %>%
+  rename(RMM = RMM.Ibge,
+         Iota = norm.Iota, 
+         Kappa = norm.Kappa, 
+         Lambda = norm.Lambda, 
+         Iota.per = norm.Iota.per, 
+         Kappa.per = norm.Kappa.per, 
+         Lambda.per = norm.Lambda.per, 
+         Sigma = norm.Sigma, 
+         Tau = norm.Tau, 
+         Eta = norm.Eta, 
+         Sigma.per = norm.Sigma.per, 
+         Tau.per = norm.Tau.per, 
+         Eta.per = norm.Eta.per) %>%
+  pivot_longer(-sigla) %>% 
+  pivot_wider(names_from = sigla, values_from = value) %>%
+  left_join(description.new, by = "name") %>% 
+  ungroup() %>%
+  select(name, description, "BR","RO","AC","AM","RR","PA","AP","TO","MA","PI","CE","RN","PB","PE","AL","SE",
+         "BA","MG","ES","RJ","SP","PR","SC","RS","MS","MT","GO","DF") %>%
+  gt() %>%
+  tab_header(title = md("**Decomposição Jain (2011) por UF - Com Ajustes e Normalizado - 2009-2019**")) %>%
+  cols_label(name = "Variable",
+             description = "Description") %>% 
+  tab_source_note(source_note = "Jain, A. K. (2011). Measuring the Effect of Fertility Decline on the Maternal Mortality Ratio. Studies in Family Planning, 42(4), 247–260") %>%
+  fmt_number(columns = all_of(estado),
+             decimals = 2) %>%
+  fmt_number(columns = all_of(estado),
+             rows = 4:6,
+             scale_by = 1/1000,
+             decimals = 2) %>%
+  tab_style(
+    locations = cells_column_labels(columns = everything()),
+    style     = list(
+      cell_borders(sides = "bottom", weight = px(3)), #Give a thick border below
+      cell_text(weight = "bold", size = px(13))))  %>%
+  tab_footnote(
+    footnote = "Em milhares",
+    locations = cells_body(columns = c(name, description), rows = 4:6)) %>%
+  tab_footnote(
+    footnote = "Normalizado",
+    locations = cells_body(columns = c(name, description), rows = 24:35)) %>%
+  tab_style(
+    style = cell_text(size = px(11)),
+    locations = cells_body(columns = everything())) %>%
+  tab_style(locations =  cells_body(columns ="name"),
+            style = cell_text(weight = "bold")) %>%
+  cols_width(starts_with("Description") ~ pct(70))  %>% 
+  cols_align(align = "center", columns = all_of(estado))
+
+# SALVANDO TABELA
+tab.com.norm %>%
+  gtsave("tabela decomposicao UF norm (2009-2019).html", inline_css = TRUE)
+
+################################
+
+# 5) TABELA DE DECOMPOSIÇÃO SEM AJUSTE - NORMALIZADA
+
+tab.sem.norm <- Decomp.sem %>%
+  select(sigla, RMM, TBN, r, P_hat, B_hat, B, D1_hat, D2_hat, 
+         D3_hat, D, X, Y, Z, intersec.X.Y, Alpha, Beta, Gama, Delta, Omega, RMM_hat, 
+         D.ano1, D.ano2, D_hat.ano2, norm.Iota, norm.Kappa, norm.Lambda, norm.Iota.per, norm.Kappa.per, 
+         norm.Lambda.per, norm.Sigma, norm.Tau, norm.Eta, norm.Sigma.per, norm.Tau.per, norm.Eta.per) %>%
+  rename(Iota = norm.Iota, 
+         Kappa = norm.Kappa, 
+         Lambda = norm.Lambda, 
+         Iota.per = norm.Iota.per, 
+         Kappa.per = norm.Kappa.per, 
+         Lambda.per = norm.Lambda.per, 
+         Sigma = norm.Sigma, 
+         Tau = norm.Tau, 
+         Eta = norm.Eta, 
+         Sigma.per = norm.Sigma.per, 
+         Tau.per = norm.Tau.per, 
+         Eta.per = norm.Eta.per) %>%
+  pivot_longer(-sigla) %>% 
+  pivot_wider(names_from = sigla, values_from = value) %>%
+  left_join(description.new, by = "name") %>% 
+  ungroup() %>%
+  select(name, description, "BR","RO","AC","AM","RR","PA","AP","TO","MA","PI","CE","RN","PB","PE","AL","SE",
+         "BA","MG","ES","RJ","SP","PR","SC","RS","MS","MT","GO","DF") %>%
+  gt() %>%
+  tab_header(title = md("**Decomposição Jain (2011) por UF - Sem Ajustes e Normalizado - 2009-2019**")) %>%
+  cols_label(name = "Variable",
+             description = "Description") %>% 
+  tab_source_note(source_note = "Jain, A. K. (2011). Measuring the Effect of Fertility Decline on the Maternal Mortality Ratio. Studies in Family Planning, 42(4), 247–260") %>%
+  fmt_number(columns = all_of(estado),
+             decimals = 2) %>%
+  fmt_number(columns = all_of(estado),
+             rows = 4:6,
+             scale_by = 1/1000,
+             decimals = 2) %>%
+  tab_style(
+    locations = cells_column_labels(columns = everything()),
+    style     = list(
+      cell_borders(sides = "bottom", weight = px(3)), #Give a thick border below
+      cell_text(weight = "bold", size = px(13))))  %>%
+  tab_footnote(
+    footnote = "Em milhares",
+    locations = cells_body(columns = c(name, description), rows = 4:6))  %>%
+  tab_footnote(
+    footnote = "Normalizado",
+    locations = cells_body(columns = c(name, description), rows = 24:35)) %>%
+  tab_style(
+    style = cell_text(size = px(12)),
+    locations = cells_body(columns = everything())) %>%
+  tab_style(locations =  cells_body(columns ="name"),
+            style = cell_text(weight = "bold")) %>%
+  cols_width(starts_with("Description") ~ px(1300))  %>% 
+  cols_align(align = "center", columns = all_of(estado))
+
+# SALVANDO TABELA
+tab.sem.norm %>%
+  gtsave("tabela decomposicao UF sem ajuste norm (2009-2019).html", inline_css = TRUE)
+
+##----------------------------------------------------------------------------------------------------------
+
+
+
+##----------------------------------------------------------------------------------------------------------
+
 ## TESTE ##
-# Decomp.09.19 %>%
-#   select(sigla, Estado, UF, region, 16:49) %>%
-#   arrange(Estado) %>%
-#   mutate(diff = abs(Eta.per) - # Attributable to safe motherhood (in %)
-#            abs(Tau.per), # Attributable to fertility decline (in %)
-#          index = rep(seq(1, 28)),
-#          ) %>%
-#   #View()
-#   ggplot(aes(x = diff, y = index, group = Estado, color = region)) + 
-#   geom_point(size = 6, alpha = 0.60) +
-#   geom_segment(aes(x = 0, xend = diff, y = index, yend = index), color = 'darkgrey') +
-#   geom_hline(yintercept = c(7, 16, 20, 23, 27) + 0.50, lwd = 0.95, linetype = "dashed", col = 'grey') +
-#   geom_vline(xintercept = 0, lwd = 1, col = 'black') +
-#   geom_text(aes(x = diff, y = index + 0.05, label = sigla), color = 'black', size = 3.5, fontface = 'bold') + 
-#   labs(title = "Decomposição Jain (2011) por UF - 2009-2019",
-#        caption = "ESSE É UM TESTE A INTERPRETAÇAO DESSES RESULTADOS AINDA É INCERTA!!!",
-#        x = '', 
-#        y = '') + 
-#   guides(color = "none", size = "none") +
-#   theme_bw() +
-#   scale_y_continuous(breaks = NULL, limits = c(0.5, 30.5)) +
-#   scale_x_continuous(breaks = seq(-100, 100, by = 20), limits = c(-100.5, 100.5)) +
-#   geom_text(label = 'Safe Motherhood', aes(x = 60, y = 30.5, vjust = 'center', 
-#                                  size = 3), color = 'black') +
-#   geom_text(label = 'Fertility', aes(x = -60, y = 30.5, vjust = 'center', 
-#                                     size = 3), color = 'black') +
-#   theme(panel.grid.minor = element_blank(),
-#         plot.title = element_text(color = "grey20", size = 15, hjust = 0.5, face = "bold"),
-#         # panel.border = element_blank(), 
-#         # axis.line = element_line()
-# )
+Decomp.com %>%
+  select(sigla, Estado, UF, region, norm.Eta.per, norm.Tau.per) %>%
+  arrange(Estado) %>%
+  mutate(norm.Eta.g.per = norm.Eta.per * (-1), # Attributable to safe motherhood (in %)
+         index = rep(seq(1, 28))
+         ) %>%
+  #View()
+  ggplot(aes(x = norm.Tau.per, y = index, group = Estado, color = region)) +
+  geom_point(size = 6, alpha = 0.80) +
+  geom_point(aes(x = norm.Eta.g.per, y = index), shape = 16, size = 5, alpha = 0.80) +
+  geom_segment(aes(x = norm.Eta.g.per, xend = norm.Tau.per, y = index, yend = index), color = '#6d6875') +
+  geom_hline(yintercept = c(7, 16, 20, 23, 27) + 0.50, lwd = 0.95, linetype = "dashed", col = 'grey') +
+  geom_vline(xintercept = 0, lwd = 1, col = 'darkgrey') +
+  geom_text(aes(x = norm.Eta.g.per, y = index + 0.05, label = sigla), color = 'black', size = 3.5, fontface = 'bold') +
+  labs(title = "Decomposição Jain (2011) por UF - 2009-2019",
+       x = '',
+       y = '',
+       caption = "Fonte: IBGE - SINASC 2009-2019, RMM 2009-2018 e Projeções de População \n Jain, A. K. (2011). Measuring the Effect of Fertility Decline on the Maternal Mortality Ratio. Studies in Family Planning, 42(4), 247–260") +
+  guides(color = "none", size = "none") +
+  theme_bw() +
+  scale_y_continuous(breaks = NULL, limits = c(0.5, 30.5)) +
+  scale_x_continuous(breaks = seq(-1, 1, by = 0.1), labels = seq(-1, 1, by = 0.1)  %>% abs) + 
+  geom_text(label = 'Maternidade Segura', aes(x = -0.6, y = 30.5, vjust = 'center',
+                                 size = 3), color = 'black') +
+  geom_text(label = 'Fecundidade', aes(x = 0.6, y = 30.5, vjust = 'center',
+                                    size = 3), color = 'black') +
+  theme(panel.grid.minor = element_blank(),
+        plot.title = element_text(color = "grey20", size = 15, hjust = 0.5, face = "bold"),
+        axis.text.x = element_text(size = 11)
+        # panel.border = element_blank(),
+        # axis.line = element_line()
+) +
+  geom_text(label = 'Norte', aes(x = -1.2, y = 3.0, angle = 90, hjust = 'center', 
+                                 size = 3), color = 'black') +
+  geom_text(label = 'Nordeste', aes(x = -1.2, y = 12.5, angle = 90, hjust = 'center', 
+                                    size = 3), color = 'black') +
+  geom_text(label = 'Sudeste', aes(x = -1.2, y = 18.5, angle = 90, hjust = 'center', 
+                                   size = 3), color = 'black') +
+  geom_text(label = 'Sul', aes(x = -1.2, y = 22.0, angle = 90, hjust = 'center', 
+                               size = 3), color = 'black') +
+  geom_text(label = 'Centro-\nOeste', aes(x = -1.2, y = 25.3, angle = 90, hjust = 'center', 
+                                          size = 3), color = 'black')+
+  geom_text(label = 'Brasil', aes(x = -1.2, y = 29.0, angle = 90, hjust = 'center', 
+                                  size = 3), color = 'black')

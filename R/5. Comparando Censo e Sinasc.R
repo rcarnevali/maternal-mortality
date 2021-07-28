@@ -25,6 +25,7 @@ library(fertestr)
 fecundidade2000.2010 <- read.csv('data/Fecundidade 2000-2010 Censo.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
 fecundidade.SN.2000.2010 <- read.csv('data/Fecundidade 2000-2010 Sinasc.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
 fecundidade2011.2019 <- read.csv('data/Fecundidade 2011-2019 Sinasc.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
+fecundidade.RC.W.2010 <- read.csv('data/Nascimentos Registro Civil - 2010.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
 
 ##----------------------------------------------------------------------------------------------------------
 
@@ -175,6 +176,7 @@ fecundidade.SN.2000.2010 <- fecundidade.SN.2000.2010 %>%
 
 
 ################################
+
 ## 3) SINASC 2011-2019 - DATASUS ##
 fecundidade2011.2019 <- fecundidade2011.2019 %>%
   rename (Grupos.de.idade = Idade) %>%
@@ -246,6 +248,87 @@ fecundidade2011.2019 <- fecundidade2011.2019 %>%
   filter(idade >=  15,
          idade <= 45)
 
+################################
+## 4) REGISTRO CIVIL 2010 ##
+
+fecundidade.RC.2010 <- fecundidade.RC.W.2010 %>%
+  pivot_longer(!c(UF), names_to = "idade",  values_to = "Filhos.tidos.no.ultimo.ano") %>%
+  mutate(Filhos.tidos.no.ultimo.ano = round(Filhos.tidos.no.ultimo.ano), 
+         idade = as.numeric(substr(idade, start = 2, stop = 3)),
+         Grupos.de.idade = case_when(idade == 10 ~ "10 a 14 anos",
+                                     idade == 15 ~ "15 a 19 anos",
+                                     idade == 20 ~ "20 a 24 anos",
+                                     idade == 25 ~ "25 a 29 anos",
+                                     idade == 30 ~ "30 a 34 anos",
+                                     idade == 35 ~ "35 a 39 anos",
+                                     idade == 40 ~ "40 a 44 anos",
+                                     idade == 45 ~ "45 a 49 anos",
+                                     idade == 50 ~ "50 a 54 anos",
+                                     idade == 55 ~ "55 a 59 anos"),
+         Estado = case_when(UF == "Rondônia" ~ 11,
+                            UF == "Acre" ~ 12,
+                            UF == "Amazonas" ~ 13,
+                            UF == "Roraima" ~ 14,
+                            UF == "Pará" ~ 15,
+                            UF == "Amapá" ~ 16,
+                            UF == "Tocantins" ~ 17,
+                            UF == "Maranhão" ~ 21,
+                            UF == "Piauí" ~ 22,
+                            UF == "Ceará" ~ 23,
+                            UF == "Rio Grande do Norte" ~ 24,
+                            UF == "Paraíba" ~ 25,
+                            UF == "Pernambuco" ~ 26,
+                            UF == "Alagoas" ~ 27,
+                            UF == "Sergipe" ~ 28,
+                            UF == "Bahia" ~ 29,
+                            UF == "Minas Gerais" ~ 31,
+                            UF == "Espírito Santo" ~ 32,
+                            UF == "Rio de Janeiro" ~ 33,
+                            UF == "São Paulo" ~ 35,
+                            UF == "Paraná" ~ 41 ,
+                            UF == "Santa Catarina" ~ 42,
+                            UF == "Rio Grande do Sul" ~ 43,
+                            UF == "Mato Grosso do Sul" ~ 50,
+                            UF == "Mato Grosso" ~ 51,
+                            UF == "Goiás" ~ 52,
+                            UF == "Distrito Federal" ~ 53,
+                            UF == "Brasil" ~ 99),
+         region = case_when(11 <= Estado & Estado <= 17 ~ "Norte",
+                            21 <= Estado & Estado <= 29 ~ "Nordeste",
+                            (31 <= Estado & Estado <= 33) | Estado == 35 ~ "Sudeste",
+                            41 <= Estado & Estado <= 43 ~ "Sul",
+                            50 <= Estado & Estado <= 53 ~ "Centro-Oeste",
+                            Estado > 55 ~ "Brasil"),
+         sigla = case_when(UF == "Rondônia" ~ "RO",
+                           UF == "Acre" ~ "AC",
+                           UF == "Amazonas" ~ "AM",
+                           UF == "Roraima" ~ "RR",
+                           UF == "Pará" ~ "PA",
+                           UF == "Amapá" ~ "AP",
+                           UF == "Tocantins" ~ "TO",
+                           UF == "Maranhão" ~ "MA",
+                           UF == "Piauí" ~ "PI",
+                           UF == "Ceará" ~ "CE",
+                           UF == "Rio Grande do Norte" ~ "RN",
+                           UF == "Paraíba" ~ "PB",
+                           UF == "Pernambuco" ~ "PE",
+                           UF == "Alagoas" ~ "AL",
+                           UF == "Sergipe" ~ "SE",
+                           UF == "Bahia" ~ "BA",
+                           UF == "Minas Gerais" ~ "MG",
+                           UF == "Espírito Santo" ~ "ES",
+                           UF == "Rio de Janeiro" ~ "RJ",
+                           UF == "São Paulo" ~ "SP",
+                           UF == "Paraná" ~ "PR",
+                           UF == "Santa Catarina" ~ "SC",
+                           UF == "Rio Grande do Sul" ~ "RS",
+                           UF == "Mato Grosso do Sul" ~ "MS",
+                           UF == "Mato Grosso" ~ "MT",
+                           UF == "Goiás" ~ "GO",
+                           UF == "Distrito Federal" ~ "DF",
+                           UF == "Brasil" ~ "BR")) %>% 
+  filter(idade >=  15,
+         idade <= 45)
 
 ##----------------------------------------------------------------------------------------------------------
 ## GRAFICO Filhos Tidos no ultimo ano 2000 e 2010 - BR e UFs
@@ -389,6 +472,60 @@ Filhos.tidos.wide %>%
   geom_point(aes(x = 1.33, y = 32.5), shape = 16, size = 5, col = "#E18EA2", alpha = 0.85) +
   geom_text(x = 1.36, y = 32.5, label = '2010', size = 4.8,
             hjust = 'left', color = 'black')
+
+#######################################
+
+## Comparando SINASC, Censo e Registro Civil
+
+Filhos.tidos2010 <- Filhos.tidos %>%
+  filter(Ano == 2010) %>%
+  left_join(fecundidade.RC.2010 %>% rename(Registro.Civil = Filhos.tidos.no.ultimo.ano) %>% 
+              select(Estado, idade, Registro.Civil), 
+            by = c("idade", "Estado")) %>%
+  select(-Parity, -ASFR, -Filhos.Tidos.Nascidos.Vivos) %>%
+  as.data.frame()
+
+# Grafico por idade
+
+scale_factor <- 1
+
+Estados <- as.factor(unique(Filhos.tidos2010$UF))
+
+plot_list = list() 
+
+for (i in Estados) {
+  print(paste ("Processing", i, sep = " "))
+  
+  temp_plot <- Filhos.tidos2010 %>%
+    filter(UF == i) %>%
+    ggplot(aes(x = idade)) + 
+    geom_path(aes(y = Filhos.tidos.no.ultimo.ano,  color = "Censo"), linetype = "dashed", size = 1.2) + 
+    geom_path(aes(y = SINASC, color = "Sinasc"), linetype = "twodash", size = 1.2) +
+    geom_path(aes(y = Registro.Civil, color = "Registro Cvil"), linetype = "solid", size = 1.2) +
+    labs(title = paste(paste("Filhos Tidos nos ultimos 12 Meses", i, "- 2010 ", sep = " "), 
+                       "Censo, Registro Civil e SINASC", sep = "\n"),
+         caption = "Fonte: IBGE - Censo Demografico 2010, Registro Civil 2010 e SINASC 2010",
+         y = "",
+         color = "Fonte") + 
+    theme_bw() +
+    scale_x_continuous(name = "Idade", breaks = seq(15, 45, 5)) +
+    theme(legend.position = "bottom",
+          legend.direction = "horizontal",
+          legend.spacing.x = grid::unit(0.15, "cm"),
+          panel.grid.minor = element_blank(),
+          plot.title = element_text(color = "grey20", size = 15, hjust = 0.5, face = "bold"), 
+          legend.title = element_text(size = scale_factor * 11, face = "bold"),
+          legend.text = element_text(size = scale_factor * 11),
+          axis.title = element_text(size = scale_factor * 12),
+          axis.text.y = element_text(size = scale_factor * 11),
+          axis.text.x = element_text(size = scale_factor * 12))
+  
+  plot_list[[i]] <- temp_plot
+  
+  ggsave(plot_list[[i]], file = paste0("Filhos Tidos Ultimo Ano 2010 Censo x Registro x Sinasc_", i,".png"),
+         dpi = 500, height = 9, width = 9, unit = 'in', scale = scale_factor)
+
+}
 
 ##----------------------------------------------------------------------------------------------------------
 
