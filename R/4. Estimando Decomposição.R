@@ -3,7 +3,6 @@
 # Build under R version 4.1.0
 
 options(scipen = 9999)
-source("R/Funcoes.r")
 
 ## Pacotes
 .packages = c("devtools", "stringr", "foreign", "Hmisc",
@@ -29,6 +28,7 @@ library(fertestr)
 ##----------------------------------------------------------------------------------------------------------
 
 ## Importando os dados
+
 Pop.00.30 <- read.csv('data/Pop 00-30.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
 Obitos.maternos2000.2019 <- read.csv('data/Prop Obitos Maternos 2000-2019.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
 #Fec.proj.20.40 <- read.csv('data/Projecao Fec 2020-2040.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
@@ -837,37 +837,36 @@ tab.sem.norm %>%
 
 ## TESTE ##
 Decomp.com %>%
-  select(sigla, Estado, UF, region, norm.Eta.per, norm.Tau.per) %>%
+  select(sigla, Estado, UF, region, norm.Kappa.per, 
+         norm.Lambda.per, norm.Eta.per, norm.Tau.per) %>%
   arrange(Estado) %>%
   mutate(norm.Eta.g.per = norm.Eta.per * (-1), # Attributable to safe motherhood (in %)
+         norm.Lambda.g.per = norm.Lambda.per * (-1), 
          index = rep(seq(1, 28))
          ) %>%
   #View()
-  ggplot(aes(x = norm.Tau.per, y = index, group = Estado, color = region)) +
-  geom_point(size = 6, alpha = 0.80) +
-  geom_point(aes(x = norm.Eta.g.per, y = index), shape = 16, size = 5, alpha = 0.80) +
-  geom_segment(aes(x = norm.Eta.g.per, xend = norm.Tau.per, y = index, yend = index), color = '#6d6875') +
+  ggplot(aes(x = norm.Kappa.per, y = index, group = Estado, color = region)) +
+  geom_point(size = 6.5, alpha = 0.70) +
+  geom_point(aes(x = norm.Lambda.g.per, y = index), shape = 16, size = 6.5, alpha = 0.80) +
+  geom_segment(aes(x = norm.Lambda.g.per, xend = norm.Kappa.per, y = index, yend = index), color = '#6d6875') +
   geom_hline(yintercept = c(7, 16, 20, 23, 27) + 0.50, lwd = 0.95, linetype = "dashed", col = 'grey') +
   geom_vline(xintercept = 0, lwd = 1, col = 'darkgrey') +
-  geom_text(aes(x = norm.Eta.g.per, y = index + 0.05, label = sigla), color = 'black', size = 3.5, fontface = 'bold') +
-  labs(title = "Decomposição Jain (2011) por UF - 2009-2019",
+  geom_text(aes(x = norm.Lambda.g.per, y = index + 0.05, label = sigla), color = 'black', size = 3.5, fontface = 'bold') +
+  labs(title = "Proporção do total da mudança na RMM por UF - 2009-2019",
        x = '',
        y = '',
        caption = "Fonte: IBGE - SINASC 2009-2019, RMM 2009-2018 e Projeções de População \n Jain, A. K. (2011). Measuring the Effect of Fertility Decline on the Maternal Mortality Ratio. Studies in Family Planning, 42(4), 247–260") +
   guides(color = "none", size = "none") +
   theme_bw() +
-  scale_y_continuous(breaks = NULL, limits = c(0.5, 30.5)) +
+  scale_y_continuous(breaks = NULL, limits = c(0.5, 32.0)) +
   scale_x_continuous(breaks = seq(-1, 1, by = 0.1), labels = seq(-1, 1, by = 0.1)  %>% abs) + 
-  geom_text(label = 'Maternidade Segura', aes(x = -0.6, y = 30.5, vjust = 'center',
+  geom_text(label = 'Atribuível a mudanças na \nMaternidade Segura', aes(x = -0.6, y = 31.5, vjust = 'center',
                                  size = 3), color = 'black') +
-  geom_text(label = 'Fecundidade', aes(x = 0.6, y = 30.5, vjust = 'center',
+  geom_text(label = 'Atribuível a mudanças \nna Fecundidade', aes(x = 0.6, y = 31.5, vjust = 'center',
                                     size = 3), color = 'black') +
   theme(panel.grid.minor = element_blank(),
         plot.title = element_text(color = "grey20", size = 15, hjust = 0.5, face = "bold"),
-        axis.text.x = element_text(size = 11)
-        # panel.border = element_blank(),
-        # axis.line = element_line()
-) +
+        axis.text.x = element_text(size = 11)) +
   geom_text(label = 'Norte', aes(x = -1.2, y = 3.0, angle = 90, hjust = 'center', 
                                  size = 3), color = 'black') +
   geom_text(label = 'Nordeste', aes(x = -1.2, y = 12.5, angle = 90, hjust = 'center', 

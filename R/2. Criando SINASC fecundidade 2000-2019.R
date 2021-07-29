@@ -18,6 +18,9 @@ if(length(.packages[!.inst]) > 0)
 # Load packages into session
 lapply(.packages, require, character.only = T)
 
+#devtools::install_github("josehcms/fertestr")
+library(fertestr)
+
 ## Importando os dados
 nascimentos.W.2000.2010 <- read.csv('data/Nascimentos BR e UFs (wide) - 2000-2010.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
 mulheres.W.2000.2010 <- read.csv('data/Pop Feminina BR e UFs - 2000-2010.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')

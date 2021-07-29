@@ -24,8 +24,8 @@ library(fertestr)
 ## Importando os dados
 fecundidade2000.2010 <- read.csv('data/Fecundidade 2000-2010 Censo.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
 fecundidade.SN.2000.2010 <- read.csv('data/Fecundidade 2000-2010 Sinasc.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
-fecundidade2011.2019 <- read.csv('data/Fecundidade 2011-2019 Sinasc.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
-fecundidade.RC.W.2010 <- read.csv('data/Nascimentos Registro Civil - 2010.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
+fecundidade.SN.2011.2019 <- read.csv('data/Fecundidade 2011-2019 Sinasc.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
+fecundidade.RC.W.2010.2019 <- read.csv('data/Nascimentos Registro Civil - 2010 e 2019.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
 
 ##----------------------------------------------------------------------------------------------------------
 
@@ -178,7 +178,7 @@ fecundidade.SN.2000.2010 <- fecundidade.SN.2000.2010 %>%
 ################################
 
 ## 3) SINASC 2011-2019 - DATASUS ##
-fecundidade2011.2019 <- fecundidade2011.2019 %>%
+fecundidade.SN.2011.2019 <- fecundidade.SN.2011.2019 %>%
   rename (Grupos.de.idade = Idade) %>%
   mutate(Filhos.tidos.no.ultimo.ano = round(Filhos.tidos.no.ultimo.ano),
          Estado = case_when(UF == "Rondônia" ~ 11,
@@ -251,8 +251,8 @@ fecundidade2011.2019 <- fecundidade2011.2019 %>%
 ################################
 ## 4) REGISTRO CIVIL 2010 ##
 
-fecundidade.RC.2010 <- fecundidade.RC.W.2010 %>%
-  pivot_longer(!c(UF), names_to = "idade",  values_to = "Filhos.tidos.no.ultimo.ano") %>%
+fecundidade.RC.2010.2019 <- fecundidade.RC.W.2010.2019 %>%
+  pivot_longer(!c(UF, Ano), names_to = "idade",  values_to = "Filhos.tidos.no.ultimo.ano") %>%
   mutate(Filhos.tidos.no.ultimo.ano = round(Filhos.tidos.no.ultimo.ano), 
          idade = as.numeric(substr(idade, start = 2, stop = 3)),
          Grupos.de.idade = case_when(idade == 10 ~ "10 a 14 anos",
@@ -477,34 +477,40 @@ Filhos.tidos.wide %>%
 
 ## Comparando SINASC, Censo e Registro Civil
 
-Filhos.tidos2010 <- Filhos.tidos %>%
+Filhos.tidos2010.2019 <- fecundidade2000.2010 %>%
+  left_join(fecundidade.SN.2000.2010 %>% select(Ano, Estado, idade, SINASC), 
+            by = c("idade", "Ano", "Estado")) %>%
+  as.data.frame() %>%
+  select(-Parity, -Filhos.Tidos.Nascidos.Vivos) %>%
+  rename (Censo = Filhos.tidos.no.ultimo.ano) %>%
   filter(Ano == 2010) %>%
-  left_join(fecundidade.RC.2010 %>% rename(Registro.Civil = Filhos.tidos.no.ultimo.ano) %>% 
-              select(Estado, idade, Registro.Civil), 
-            by = c("idade", "Estado")) %>%
-  select(-Parity, -ASFR, -Filhos.Tidos.Nascidos.Vivos) %>%
+  bind_rows(fecundidade.SN.2011.2019 %>% filter(Ano == 2019) %>% rename (SINASC = Filhos.tidos.no.ultimo.ano)) %>%
+  left_join(fecundidade.RC.2010.2019 %>% rename(Registro.Civil = Filhos.tidos.no.ultimo.ano) %>% 
+              select(Ano, Estado, idade, Registro.Civil), 
+            by = c("idade", "Ano", "Estado")) %>%
+  select(-ASFR) %>%
   as.data.frame()
 
 # Grafico por idade
 
 scale_factor <- 1
 
-Estados <- as.factor(unique(Filhos.tidos2010$UF))
+Estados <- as.factor(unique(Filhos.tidos2010.2019$UF))
 
 plot_list = list() 
 
 for (i in Estados) {
   print(paste ("Processing", i, sep = " "))
   
-  temp_plot <- Filhos.tidos2010 %>%
+  temp_plot <- Filhos.tidos2010.2019 %>%
     filter(UF == i) %>%
     ggplot(aes(x = idade)) + 
-    geom_path(aes(y = Filhos.tidos.no.ultimo.ano,  color = "Censo"), linetype = "dashed", size = 1.2) + 
+    geom_path(aes(y = Censo,  color = "Censo"), linetype = "dashed", size = 1.2) + 
     geom_path(aes(y = SINASC, color = "Sinasc"), linetype = "twodash", size = 1.2) +
-    geom_path(aes(y = Registro.Civil, color = "Registro Cvil"), linetype = "solid", size = 1.2) +
+    geom_path(aes(y = Registro.Civil, color = "Registro Cvil"), linetype = "solid", size = 1.2, alpha = 0.6) +
     labs(title = paste(paste("Filhos Tidos nos ultimos 12 Meses", i, "- 2010 ", sep = " "), 
                        "Censo, Registro Civil e SINASC", sep = "\n"),
-         caption = "Fonte: IBGE - Censo Demografico 2010, Registro Civil 2010 e SINASC 2010",
+         caption = "Fonte: IBGE - Censo Demografico 2010, Registro Civil 2010 e 2019 e SINASC 2010 e 2019",
          y = "",
          color = "Fonte") + 
     theme_bw() +
@@ -518,11 +524,12 @@ for (i in Estados) {
           legend.text = element_text(size = scale_factor * 11),
           axis.title = element_text(size = scale_factor * 12),
           axis.text.y = element_text(size = scale_factor * 11),
-          axis.text.x = element_text(size = scale_factor * 12))
+          axis.text.x = element_text(size = scale_factor * 12))+
+    facet_wrap("Ano") 
   
   plot_list[[i]] <- temp_plot
   
-  ggsave(plot_list[[i]], file = paste0("Filhos Tidos Ultimo Ano 2010 Censo x Registro x Sinasc_", i,".png"),
+  ggsave(plot_list[[i]], file = paste0("Filhos Tidos Ultimo Ano 2010 e 2019 - Censo x Registro x Sinasc_", i,".png"),
          dpi = 500, height = 9, width = 9, unit = 'in', scale = scale_factor)
 
 }
