@@ -1,0 +1,392 @@
+---
+title: "Dashboard Mortalidade Materna"
+author: "Grupo de Pesquisa sobre Mortalidade Materna" 
+runtime: shiny
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns  # ou rows
+    vertical_layout: fill  # ou scroll
+    #css: styles.css
+---
+
+```{r setup, include = FALSE}
+
+# O include=FALSE serve para indicar que vamos rodar esse pedaço do codigo
+# mas nem o código nem a saída são exibidos no arquivo.
+
+options(scipen = 9999)
+
+## Pacotes
+.packages = c("foreign", "plotly", "scales", "ggplot2", "tidyr", "gt", "brazilmaps", "fertestr",
+              "colorspace", "ggspatial", "RColorBrewer", "maptools", "viridis", "dplyr", "flexdashboard")
+
+# Load packages into session
+lapply(.packages, require, character.only = T)
+
+load("dashboard env.RData")
+
+tab.com.norm <- Decomp.com %>%
+  select(sigla, RMM.Ibge, TBN, r, P_hat, B_hat, B, D1_hat, D2_hat, 
+         D3_hat, D, X, Y, Z, intersec.X.Y, Alpha, Beta, Gama, Delta, Omega, RMM_hat, 
+         D.ano1, D.ano2, D_hat.ano2, norm.Iota.per, norm.Kappa.per, 
+         norm.Lambda.per, norm.Sigma.per, norm.Tau.per, norm.Eta.per) %>%
+  rename(RMM = RMM.Ibge,
+         Iota.per = norm.Iota.per, 
+         Kappa.per = norm.Kappa.per, 
+         Lambda.per = norm.Lambda.per, 
+         Sigma.per = norm.Sigma.per, 
+         Tau.per = norm.Tau.per, 
+         Eta.per = norm.Eta.per) %>%
+  pivot_longer(-sigla) %>% 
+  pivot_wider(names_from = sigla, values_from = value) %>%
+  left_join(description, by = "name") %>% 
+  ungroup() %>%
+  select(name, description, all_of(unitfed))
+
+
+mapa <- Decomp.com %>% 
+              filter(sigla != "BR") %>% 
+              select(Estado, sigla, RMM.Ibge, norm.Kappa.per, norm.Lambda.per) %>% 
+  mutate(categ = ifelse((norm.Lambda.per * (-1)) + norm.Kappa.per > 0,
+                        "Fecundidade",
+                        "Maternidade Segura")) %>%
+  rename(RMM = RMM.Ibge,
+         Kappa.per = norm.Kappa.per, 
+         Lambda.per = norm.Lambda.per,
+         Causa = categ) %>%
+  mutate_if(is.numeric, as.character, is.factor, as.character) %>%
+  pivot_longer(!c(Estado, sigla), names_to = "variavel", values_to = "decomp",
+               values_transform = list(decomp = as.character)) %>%
+  mutate(Estado = as.double(Estado)) 
+
+
+mapa2 <- TFT.2000.2019 %>%
+              filter(Ano >= 2009, sigla != "BR") %>%
+              select(Ano, Estado, sigla, TFT, RMM.Ibge) %>%
+  rename(RMM = RMM.Ibge) %>%
+  mutate_if(is.numeric, as.character, is.factor, as.character) %>%
+  pivot_longer(!c(Ano, Estado, sigla), names_to = "variavel", values_to = "estim",
+               values_transform = list(decomp = as.character), values_drop_na = TRUE)%>%
+  mutate(Estado = as.double(Estado))
+ 
+
+brasil <- brazilmaps::get_brmap("State")
+
+
+```
+
+# Visualizações {data-icon="fa-signal" data-navmenu="Analises"} 
+
+# Barra Lateral  {.sidebar}
+-------------------------------------
+
+```{r}
+
+inputPanel(
+
+selectInput("select", 
+            label = h3("Selecione a variável de interesse:"), 
+            choices = list ("Razão de Mortalidade Materna" = "RMM",
+                            "Taxa de Fecundidade Total" = "TFT",
+                            "Principal causa de alteração na RMM durante o período" = "Causa", 
+                            "Alteração na RMM atribuível a mudança na fecundidade" = "Kappa.per",
+                            "Alteração na RMM atribuível a iniciativas de maternidade segura" = "Lambda.per"),
+            multiple = F,
+            selected = "RMM"),  
+
+ # Only show this panel if the variable is RMM
+conditionalPanel(
+        condition = "input.select == 'RMM'",
+             selectInput("year", 
+                         label = h4("Selecione o ano:"), 
+                         choices = seq(2009, 2019, by = 1),
+                         multiple = F)),
+
+ # Only show this panel if the variable is RMM
+conditionalPanel(
+        condition = "input.select == 'TFT'",
+             selectInput("yeartft", 
+                         label = h4("Selecione o ano:"), 
+                         choices = seq(2009, 2019, by = 1),
+                         multiple = F))
+)
+
+```
+
+
+Column
+-----------------------------------------------------------------------
+
+### Mapa
+
+```{r, message=FALSE, warning=FALSE}
+
+# Renderizando o mapa
+graph <- reactive ({
+  
+  if (input$select == "RMM") {
+    
+    brasil %>% 
+      left_join(mapa2 %>% filter(variavel == "RMM", Ano%in%input$yeartft), by = c("State" = "Estado")) %>%
+      mutate(estim = as.double(estim)) %>%
+      ggplot(aes(fill = estim), colour = "black", size = 0.2) + 
+      geom_sf() +
+      scale_fill_gradientn(colours = viridis(48, alpha = 1, begin = 0, end = 1, option = "C",  direction = -1), 
+                           n.breaks = 6) + 
+      labs(title = paste0("Razão de Mortalidade Materna - ", input$year, sep = " "),
+           caption = "Fonte: IBGE - SINASC 2009-2019, RMM 2009-2018 e Projeções de População",
+           fill = guide_legend(title = "RMM")) +
+      theme_minimal() + 
+      theme(plot.caption = element_text(size = 15),
+            axis.title.x = element_blank(),
+            axis.title.y = element_blank(),
+            plot.title = element_text(color = "black", size = 24, hjust = 0.5), ## CENTRALIZA O TITULO
+            plot.title.position = "plot",
+            plot.caption.position = "plot",
+            legend.title = element_text(size = 18, face = "bold"),
+            legend.text = element_text(size = 18)) +
+      geom_sf_label(aes(label = sigla), label.size = NA, size = 4,
+                    color = "black", fontface = "bold") + ## NOMES DAS UFs
+      annotation_scale(unit_category = "metric", location = "bl", width_hint = 0.15) + ## ESCALA
+      annotation_north_arrow(location = "bl", which_north = "true", pad_x = unit(0.5, "in"), pad_y = unit(0.3, "in"),
+                             style = north_arrow_fancy_orienteering) ## INDICADOR DO NORTE
+      # theme(panel.grid = element_line(colour = "transparent"), ## TIRA O SISTEMA CARTESIANO
+      #       panel.background = element_blank(),
+      #       plot.caption = element_text(size = 15),
+      #       axis.title.x = element_blank(),
+      #       axis.title.y = element_blank(),
+      #       axis.text = element_blank(),
+      #       axis.ticks = element_blank(),
+      #       plot.title = element_text(color = "black", size = 24, hjust = 0.5), ## CENTRALIZA O TITULO
+      #       plot.title.position = "plot",
+      #       plot.caption.position = "plot",
+      #       legend.title = element_text(size = 18, face = "bold"),
+      #       legend.text = element_text(size = 18))  +
+      # geom_sf_label(aes(label = sigla), fill = "transparent", label.size = NA, size = 4,
+      #               color = "black", fontface = "bold") + ## NOMES DAS UFs
+      # annotation_scale(unit_category = "metric", location = "bl", width_hint = 0.15) + ## ESCALA
+      # annotation_north_arrow(location = "bl", which_north = "true", pad_x = unit(0.5, "in"), pad_y = unit(0.3, "in"),
+      #                        style = north_arrow_fancy_orienteering) ## INDICADOR DO NORTE
+    
+  } else if (input$select == "TFT") {
+    
+    brasil %>% 
+      left_join(mapa2 %>% filter(variavel == "TFT", Ano%in%input$yeartft), by = c("State" = "Estado")) %>%
+      mutate(estim = as.double(estim)) %>%
+      ggplot(aes(fill = estim), colour = "black", size = 0.2) + 
+      geom_sf() +
+      scale_fill_gradientn(colours = viridis(48, alpha = 1, begin = 0, end = 1, option = "C",  direction = -1), 
+                           n.breaks = 6,  limits = c(1.4, 2.8)) +
+      labs(title = paste0("Taxa de Fecundidade Total - ", input$yeartft),
+           caption = "Fonte: IBGE - SINASC 2009-2019, RMM 2009-2018 e Projeções de População",
+           fill = guide_legend(title = "TFT")) +
+      theme_minimal() + 
+      theme(plot.caption = element_text(size = 15),
+            axis.title.x = element_blank(),
+            axis.title.y = element_blank(),
+            plot.title = element_text(color = "black", size = 24, hjust = 0.5), ## CENTRALIZA O TITULO
+            plot.title.position = "plot",
+            plot.caption.position = "plot",
+            legend.title = element_text(size = 18, face = "bold"),
+            legend.text = element_text(size = 18)) +
+      geom_sf_label(aes(label = sigla), label.size = NA, size = 4,
+                    color = "black", fontface = "bold") + ## NOMES DAS UFs
+      annotation_scale(unit_category = "metric", location = "bl", width_hint = 0.15) + ## ESCALA
+      annotation_north_arrow(location = "bl", which_north = "true", pad_x = unit(0.5, "in"), pad_y = unit(0.3, "in"),
+                             style = north_arrow_fancy_orienteering) ## INDICADOR DO NORTE
+    
+  } else if (input$select == "Causa") {
+    
+    brasil %>% 
+      left_join(mapa %>% filter(variavel == "Causa"), by = c("State" = "Estado")) %>%
+      ggplot(aes(fill = decomp), colour = "black", size = 0.2) + 
+      geom_sf() +
+      scale_fill_manual(values = c("#9DB6FB","#EB4783"))+
+      labs(title = "Principal causa da mudança na RMM \n entre 2009 e 2019 entre os estados brasileiros",
+           caption = "Fonte: IBGE - SINASC 2009-2019, RMM 2009-2018 e Projeções de População",
+           fill = guide_legend(title = "Principal Causa")) +
+      theme_minimal() + 
+      theme(plot.caption = element_text(size = 15),
+            axis.title.x = element_blank(),
+            axis.title.y = element_blank(),
+            plot.title = element_text(color = "black", size = 24, hjust = 0.5), ## CENTRALIZA O TITULO
+            plot.title.position = "plot",
+            plot.caption.position = "plot",
+            legend.title = element_text(size = 18, face = "bold"),
+            legend.text = element_text(size = 18)) +
+      geom_sf_label(aes(label = sigla), label.size = NA, size = 4,
+                    color = "black", fontface = "bold") + ## NOMES DAS UFs
+      annotation_scale(unit_category = "metric", location = "bl", width_hint = 0.15) + ## ESCALA
+      annotation_north_arrow(location = "bl", which_north = "true", pad_x = unit(0.5, "in"), pad_y = unit(0.3, "in"),
+                             style = north_arrow_fancy_orienteering) ## INDICADOR DO NORTE
+    
+  } else if (input$select == "Kappa.per") {
+    
+    brasil %>% 
+      left_join(mapa %>% filter(variavel == "Kappa.per"), by = c("State" = "Estado")) %>%
+      mutate(decomp = as.double(decomp)) %>%
+      ggplot(aes(fill = decomp), colour = "black", size = 0.2) + 
+      geom_sf() +
+      scale_fill_gradientn(colours = viridis(48, alpha = 1, begin = 0, end = 1, option = "C",  direction = -1), 
+                           n.breaks = 6) +
+      labs(title = "Proporção da alteração na RMM atribuível a mudança na FECUNDIDADE",
+           caption = "Fonte: IBGE - SINASC 2009-2019, RMM 2009-2018 e Projeções de População",
+           fill = guide_legend(title = " ")) +
+      theme_minimal() + 
+      theme(plot.caption = element_text(size = 15),
+            axis.title.x = element_blank(),
+            axis.title.y = element_blank(),
+            plot.title = element_text(color = "black", size = 24, hjust = 0.5), ## CENTRALIZA O TITULO
+            plot.title.position = "plot",
+            plot.caption.position = "plot",
+            legend.title = element_text(size = 18, face = "bold"),
+            legend.text = element_text(size = 18)) +
+      geom_sf_label(aes(label = sigla), label.size = NA, size = 4,
+                    color = "black", fontface = "bold") + ## NOMES DAS UFs
+      annotation_scale(unit_category = "metric", location = "bl", width_hint = 0.15) + ## ESCALA
+      annotation_north_arrow(location = "bl", which_north = "true", pad_x = unit(0.5, "in"), pad_y = unit(0.3, "in"),
+                             style = north_arrow_fancy_orienteering) ## INDICADOR DO NORTE
+    
+  } else if (input$select == "Lambda.per") {
+   
+    brasil %>% 
+      left_join(mapa %>% filter(variavel == "Lambda.per"), by = c("State" = "Estado")) %>%
+      mutate(decomp = as.double(decomp)) %>%
+      ggplot(aes(fill = decomp), colour = "black", size = 0.2) + 
+      geom_sf() +
+      scale_fill_gradientn(colours = viridis(48, alpha = 1, begin = 0, end = 1, option = "C",  direction = -1), 
+                           n.breaks = 6) +
+      labs(title = "Proporção da alteração na RMM atribuível a iniciativas de maternidade segura",
+           caption = "Fonte: IBGE - SINASC 2009-2019, RMM 2009-2018 e Projeções de População",
+           fill = guide_legend(title = " ")) +
+      theme_minimal() + 
+      theme(plot.caption = element_text(size = 15),
+            axis.title.x = element_blank(),
+            axis.title.y = element_blank(),
+            plot.title = element_text(color = "black", size = 24, hjust = 0.5), ## CENTRALIZA O TITULO
+            plot.title.position = "plot",
+            plot.caption.position = "plot",
+            legend.title = element_text(size = 18, face = "bold"),
+            legend.text = element_text(size = 18)) +
+      geom_sf_label(aes(label = sigla), label.size = NA, size = 4,
+                    color = "black", fontface = "bold") + ## NOMES DAS UFs
+      annotation_scale(unit_category = "metric", location = "bl", width_hint = 0.15) + ## ESCALA
+      annotation_north_arrow(location = "bl", which_north = "true", pad_x = unit(0.5, "in"), pad_y = unit(0.3, "in"),
+                             style = north_arrow_fancy_orienteering) ## INDICADOR DO NORTE
+    
+  }
+}
+)
+
+  
+renderPlot({
+  graph()
+})
+
+
+```
+
+# Gráfico de Pontos {data-table=row data-icon="fa-sliders" data-navmenu="Analises"}
+
+Column
+-----------------------------------------------------------------------
+
+### Mapa
+
+```{r, message=FALSE, warning=FALSE}
+
+# data-icon="fa-bullseye"
+# data-icon="fa-sliders"
+# data-icon="fa-clipboard"
+# data-icon="fa-paperclip"
+# data-icon="fa-table-list"
+
+renderPlotly({
+  
+  grafico = Decomp.com %>%
+  select(sigla, Estado, UF, region, norm.Kappa.per, 
+         norm.Lambda.per, norm.Eta.per, norm.Tau.per) %>%
+  arrange(Estado) %>%
+  mutate(norm.Lambda.g.per = norm.Lambda.per * (-1), 
+         index = rep(seq(1, 28))) %>%
+  rename(Fecundidade = norm.Kappa.per, 
+         Maternidade = norm.Lambda.g.per) %>%
+  ggplot(aes(x = Fecundidade, y = index, group = Estado, color = region)) +
+  geom_point(size = 6.5, alpha = 0.70) +
+  geom_point(aes(x = Maternidade, y = index), shape = 16, size = 6.5, alpha = 0.80) +
+  geom_segment(aes(x = Maternidade, xend = Fecundidade, y = index, yend = index), color = '#6d6875') +
+  geom_hline(yintercept = c(7, 16, 20, 23, 27) + 0.50, lwd = 0.95, linetype = "dashed", col = 'grey') +
+  geom_vline(xintercept = 0, lwd = 1, col = 'darkgrey') +
+  geom_text(aes(x = Maternidade, y = index + 0.05, label = sigla), color = 'black', size = 3.5, fontface = 'bold') +
+  labs(title = "Proporção do total da mudança na RMM por UF - 2009-2019",
+       x = '',
+       y = '',
+       caption = "Fonte: IBGE - SINASC 2009-2019, RMM 2009-2018 e Projeções de População") +
+  guides(color = "none", size = "none") +
+  theme_bw() +
+  scale_y_continuous(breaks = NULL, limits = c(0.5, 32.0)) +
+  scale_x_continuous(breaks = seq(-1, 1, by = 0.1), labels = seq(-1, 1, by = 0.1)  %>% abs) + 
+  geom_text(label = 'Atribuível a mudanças na \nMaternidade Segura', aes(x = -0.6, y = 31.5, vjust = 'center',
+                                 size = 3), color = 'black') +
+  geom_text(label = 'Atribuível a mudanças \nna Fecundidade', aes(x = 0.6, y = 31.5, vjust = 'center',
+                                    size = 3), color = 'black') +
+  theme(panel.grid.minor = element_blank(),
+        plot.title = element_text(color = "grey20", size = 15, hjust = 0.5, face = "bold"),
+        axis.text.x = element_text(size = 11)) +
+  geom_text(label = 'Norte', aes(x = -1.2, y = 3.0, angle = 90, hjust = 'center', 
+                                 size = 3), color = 'black') +
+  geom_text(label = 'Nordeste', aes(x = -1.2, y = 12.5, angle = 90, hjust = 'center', 
+                                    size = 3), color = 'black') +
+  geom_text(label = 'Sudeste', aes(x = -1.2, y = 18.5, angle = 90, hjust = 'center', 
+                                   size = 3), color = 'black') +
+  geom_text(label = 'Sul', aes(x = -1.2, y = 22.0, angle = 90, hjust = 'center', 
+                               size = 3), color = 'black') +
+  geom_text(label = 'Centro-\nOeste', aes(x = -1.2, y = 25.3, angle = 90, hjust = 'center', 
+                                          size = 3), color = 'black')+
+  geom_text(label = 'Brasil', aes(x = -1.2, y = 29.0, angle = 90, hjust = 'center', 
+                                  size = 3), color = 'black')
+
+ggplotly(grafico)
+
+})
+
+
+```
+
+# Tabelas {data-table=row data-icon="fa-list" data-navmenu="Analises"}
+
+### Tabela da base de Dados
+
+```{r, message=FALSE, warning=FALSE}
+
+
+div(style = 'overflow: scroll', 
+    
+  gt(tab.com.norm %>% select(-name)) %>%
+  tab_header(title = md("**Decomposição Jain (2011) por UF - Com Ajustes - 2009-2019**")) %>%
+  cols_label(description = "Description") %>% 
+  tab_source_note(source_note = "Jain, A. K. (2011). Measuring the Effect of Fertility Decline on the Maternal Mortality Ratio. Studies in Family Planning, 42(4), 247–260") %>%
+  fmt_number(columns = all_of(unitfed),
+              decimals = 2) %>%
+  fmt_number(columns = all_of(unitfed),
+             rows = 4:6,
+             scale_by = 1/1000,
+             decimals = 2) %>%
+  tab_style(
+    locations = cells_column_labels(columns = everything()),
+    style     = list(
+      cell_borders(sides = "bottom", weight = px(3)), #Give a thick border below
+      cell_text(weight = "bold", size = px(13))))  %>%
+  tab_footnote(
+    footnote = "Em milhares",
+    locations = cells_body(columns = description, rows = 4:6)) %>%
+  tab_style(
+    style = cell_text(size = px(12)),
+    locations = cells_body(columns = everything())) %>%
+  tab_style(locations =  cells_body(columns =  description),
+            style = cell_text(weight = "bold")) %>%
+  cols_width(starts_with("Description") ~ px(1300))  %>% 
+  cols_align(align = "center", columns = all_of(unitfed))
+)
+
+```

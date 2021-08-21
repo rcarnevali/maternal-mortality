@@ -6,7 +6,9 @@ options(scipen = 9999)
 ## Pacotes
 .packages = c("devtools", "stringr", "foreign", "Hmisc",
               "scales", "zoo", "janitor", "ggplot2", "tidyr",
-              "dplyr", "data.table", "gt", "paletteer")
+              "dplyr", "data.table", "gt", "brazilmaps",
+              "colorspace", "ggspatial", "RColorBrewer",
+              "maptools", "viridis", "paletteer")
 
 # Install CRAN packages (if not already installed)
 .inst <- .packages %in% installed.packages()

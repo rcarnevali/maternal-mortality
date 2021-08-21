@@ -7,7 +7,9 @@ options(scipen = 9999)
 ## Pacotes
 .packages = c("devtools", "stringr", "foreign", "Hmisc",
               "scales", "zoo", "janitor", "ggplot2", "tidyr",
-              "dplyr", "data.table", "gt")
+              "dplyr", "data.table", "gt", "brazilmaps",
+              "colorspace", "ggspatial", "RColorBrewer",
+              "maptools", "viridis", "paletteer")
 
 # Install CRAN packages (if not already installed)
 .inst <- .packages %in% installed.packages()
@@ -381,133 +383,133 @@ TFT.2000.2019 <- TFT.2000.2019 %>%
 
 ################################
 ## 2) Usando os dados do BR ##
-Decomp <- TFT.2000.2019 %>%
-  filter(sigla == "BR",
-         Ano == 2009 | Ano == 2014 | Ano == 2019)  %>% 
-  select(Ano, Estado, UF, sigla, region, Pop, Women, Nascimentos, NV.Ajus.Gompertz.sem.P, 
-         TFT, Gompertz.sem.P, RMM, RMM.Obt.Corr, RMM.Ibge, RMM.Gompertz.sem.P) %>%
-  mutate(TBN = (Nascimentos/Pop) * 1000,
-         r = NA,
-         P_hat = NA, 
-         B_hat = NA,
-         B = NA,
-         D1_hat = NA,
-         D2_hat = NA,
-         D3_hat = NA,
-         D = NA,
-         X = NA,
-         Y = NA,
-         Z = NA)
-
-# r = Annual population growth rate: 2009-2014 and 2014-2019
-Decomp$r[Decomp$Ano == 2014] <- ((log(Decomp$Pop[Decomp$Ano == 2014] / Decomp$Pop[Decomp$Ano == 2009])) / (2014 - 2009))
-Decomp$r[Decomp$Ano == 2019] <- ((log(Decomp$Pop[Decomp$Ano == 2019] / Decomp$Pop[Decomp$Ano == 2014])) / (2019 - 2014))
-
-# P_hat = 2019 estimated population assuming constant annual growth rate from 2009-2014
-Decomp$P_hat[Decomp$Ano == 2019] <- Decomp$Pop[Decomp$Ano == 2009] * (exp(19 * Decomp$r[Decomp$Ano == 2014]))
-
-# B_hat = Projected births in 2019 assuming constant fertility
-Decomp$B_hat[Decomp$Ano == 2019] <- Decomp$P_hat[Decomp$Ano == 2019] * Decomp$TBN[Decomp$Ano == 2009] / 1000
-
-# B = Actual births in 2019 
-Decomp$B[Decomp$Ano == 2019] <- Decomp$Nascimentos[Decomp$Ano == 2019]
-#Decomp$B2[Decomp$Ano == 2019] <- Decomp$P_hat[Decomp$Ano == 2019] * Decomp$TBN[Decomp$Ano == 2019] / 1000
-
-
-# D1_hat = No change in CBR and no change in MMR
-Decomp$D1_hat[Decomp$Ano == 2019] <- Decomp$B_hat[Decomp$Ano == 2019] * Decomp$RMM.Ibge[Decomp$Ano == 2009] / 100000
-
-# D3_hat = MMR declined but CBR did not
-Decomp$D3_hat[Decomp$Ano == 2019] <- Decomp$B_hat[Decomp$Ano == 2019] * Decomp$RMM.Ibge[Decomp$Ano == 2019] / 100000
-
-# D2_hat = CBR declined but MMR did not
-Decomp$D2_hat[Decomp$Ano == 2019] <- Decomp$B[Decomp$Ano == 2019] * Decomp$RMM.Ibge[Decomp$Ano == 2009] / 100000
-
-# D = Both CBR and MMR declined
-Decomp$D[Decomp$Ano == 2019] <- Decomp$B[Decomp$Ano == 2019] * Decomp$RMM.Ibge[Decomp$Ano == 2019] / 100000
-
-
-# Y = Total effect of decline in MMR 
-Decomp$Y <- Decomp$D1_hat - Decomp$D3_hat
-
-# X = Total effect of fertility decline
-Decomp$X <- Decomp$D1_hat - Decomp$D2_hat
-
-# Z = Total effect of declines in both fertility and MMR
-Decomp$Z <- Decomp$D1_hat - Decomp$D
-
-Decomp <- Decomp %>%
-  mutate(intersec.X.Y = X + Y - Z, # intersec.X.Y = Overlap between the effect of declines in fertility and in MMR
-         Alpha = Y - intersec.X.Y, # Alpha = Net effect of decline in MMR
-         Beta = X - intersec.X.Y, # Beta = Net effect of fertility decline
-         Gama = (Alpha / Z) * 100, # Gama = Effect of safe motherhood on the % of the  potential number of maternal lives saved in 2019
-         Delta = (Beta / Z) * 100, # Delta = Effect of decrease in live births on the % of the  potential number of maternal lives saved in 2019
-         Omega = (intersec.X.Y / Z) * 100) # Omega = Effect of fertility reduction realized through its effect on MMR reduction
-
-##----------------------------------------------------------------------------------------------------------
-
-### Estimation of the decline in maternal mortality ratio and number of actual maternal deaths attributable to fertility decline ###
-
-Decomp <- Decomp %>%
-  mutate(RMM_hat = NA,
-         D.09 = NA,
-         D.19 = NA, 
-         D_hat.19 = NA,
-         Iota = NA,
-         Kappa = NA,
-         Lambda = NA,
-         Iota.per = NA,
-         Kappa.per = NA,
-         Lambda.per = NA,
-         Sigma = NA,
-         Tau = NA,
-         Eta = NA,
-         Sigma.per = NA,
-         Tau.per = NA,
-         Eta.per = NA)
-
-# RMM_hat = MMR in 2019 implied by fertility reduction observed during 2009-2019
-Decomp$RMM_hat[Decomp$Ano == 2019] <- Decomp$RMM.Ibge[Decomp$Ano == 2019] + 
-                                             ((Decomp$B[Decomp$Ano == 2019] / Decomp$B_hat[Decomp$Ano == 2019]) *
-                                                (Decomp$RMM.Ibge[Decomp$Ano == 2009] - Decomp$RMM.Ibge[Decomp$Ano == 2019]))
-                                                                      
-# D.09 = Maternal deaths in 2009
-Decomp$D.09[Decomp$Ano == 2019] <- (Decomp$Nascimentos[Decomp$Ano == 2009] * Decomp$RMM.Ibge[Decomp$Ano == 2009]) / 100000
-
-# D.19 = Maternal deaths in 2019
-Decomp$D.19[Decomp$Ano == 2019] <- (Decomp$Nascimentos[Decomp$Ano == 2019] * Decomp$RMM.Ibge[Decomp$Ano == 2019]) / 100000
-
-# D_hat.19 = Maternal deaths in 2019 implied by fertility decline observed between 2009 and 2019
-Decomp$D_hat.19[Decomp$Ano == 2019] <- (Decomp$Nascimentos[Decomp$Ano == 2019] *  Decomp$RMM_hat[Decomp$Ano == 2019]) / 100000
-
-
-# Iota = Total decline in MMR between 2009 and 2019
-Decomp$Iota[Decomp$Ano == 2019] <- Decomp$RMM.Ibge[Decomp$Ano == 2009] - Decomp$RMM.Ibge[Decomp$Ano == 2019]
-Decomp$Iota.per[Decomp$Ano == 2019] <- 100 #(in %)
-
-# Kappa = Decline in MMR attributable to fertility reduction
-Decomp$Kappa[Decomp$Ano == 2019] <- Decomp$RMM.Ibge[Decomp$Ano == 2009] - Decomp$RMM_hat[Decomp$Ano == 2019]
-Decomp$Kappa.per[Decomp$Ano == 2019] <- (Decomp$Kappa[Decomp$Ano == 2019] * 100) / Decomp$Iota[Decomp$Ano == 2019] #(in %)
-
-# Lambda = Decline in MMR attributable to safe motherhood initiatives
-Decomp$Lambda[Decomp$Ano == 2019] <- Decomp$RMM_hat[Decomp$Ano == 2019] - Decomp$RMM.Ibge[Decomp$Ano == 2019]
-Decomp$Lambda.per[Decomp$Ano == 2019] <- (Decomp$Lambda[Decomp$Ano == 2019] * 100) / Decomp$Iota[Decomp$Ano == 2019] #(in %)
-
-
-# Sigma = Total decline in actual maternal deaths between 2009 and 2019
-Decomp$Sigma[Decomp$Ano == 2019] <- Decomp$D.09[Decomp$Ano == 2019] - Decomp$D.19[Decomp$Ano == 2019] 
-Decomp$Sigma.per[Decomp$Ano == 2019] <- 100 #(in %)
-  
-# Tau = Attributable to fertility decline
-Decomp$Tau[Decomp$Ano == 2019] <-  Decomp$D.09[Decomp$Ano == 2019] - Decomp$D_hat.19[Decomp$Ano == 2019]
-Decomp$Tau.per[Decomp$Ano == 2019] <- (Decomp$Tau[Decomp$Ano == 2019] * 100) / Decomp$Sigma[Decomp$Ano == 2019] #(in %)
-
-# Eta = Attributable to safe motherhood
-Decomp$Eta[Decomp$Ano == 2019] <- Decomp$D_hat.19[Decomp$Ano == 2019] - Decomp$D.19[Decomp$Ano == 2019]
-Decomp$Eta.per[Decomp$Ano == 2019] <- (Decomp$Eta[Decomp$Ano == 2019] * 100) / Decomp$Sigma[Decomp$Ano == 2019] #(in %)
-
-Decomp <- Decomp %>%
-  mutate(across(22:48, round, 3))
+# Decomp <- TFT.2000.2019 %>%
+#   filter(sigla == "BR",
+#          Ano == 2009 | Ano == 2014 | Ano == 2019)  %>% 
+#   select(Ano, Estado, UF, sigla, region, Pop, Women, Nascimentos, NV.Ajus.Gompertz.sem.P, 
+#          TFT, Gompertz.sem.P, RMM, RMM.Obt.Corr, RMM.Ibge, RMM.Gompertz.sem.P) %>%
+#   mutate(TBN = (Nascimentos/Pop) * 1000,
+#          r = NA,
+#          P_hat = NA, 
+#          B_hat = NA,
+#          B = NA,
+#          D1_hat = NA,
+#          D2_hat = NA,
+#          D3_hat = NA,
+#          D = NA,
+#          X = NA,
+#          Y = NA,
+#          Z = NA)
+# 
+# # r = Annual population growth rate: 2009-2014 and 2014-2019
+# Decomp$r[Decomp$Ano == 2014] <- ((log(Decomp$Pop[Decomp$Ano == 2014] / Decomp$Pop[Decomp$Ano == 2009])) / (2014 - 2009))
+# Decomp$r[Decomp$Ano == 2019] <- ((log(Decomp$Pop[Decomp$Ano == 2019] / Decomp$Pop[Decomp$Ano == 2014])) / (2019 - 2014))
+# 
+# # P_hat = 2019 estimated population assuming constant annual growth rate from 2009-2014
+# Decomp$P_hat[Decomp$Ano == 2019] <- Decomp$Pop[Decomp$Ano == 2009] * (exp(19 * Decomp$r[Decomp$Ano == 2014]))
+# 
+# # B_hat = Projected births in 2019 assuming constant fertility
+# Decomp$B_hat[Decomp$Ano == 2019] <- Decomp$P_hat[Decomp$Ano == 2019] * Decomp$TBN[Decomp$Ano == 2009] / 1000
+# 
+# # B = Actual births in 2019 
+# Decomp$B[Decomp$Ano == 2019] <- Decomp$Nascimentos[Decomp$Ano == 2019]
+# #Decomp$B2[Decomp$Ano == 2019] <- Decomp$P_hat[Decomp$Ano == 2019] * Decomp$TBN[Decomp$Ano == 2019] / 1000
+# 
+# 
+# # D1_hat = No change in CBR and no change in MMR
+# Decomp$D1_hat[Decomp$Ano == 2019] <- Decomp$B_hat[Decomp$Ano == 2019] * Decomp$RMM.Ibge[Decomp$Ano == 2009] / 100000
+# 
+# # D3_hat = MMR declined but CBR did not
+# Decomp$D3_hat[Decomp$Ano == 2019] <- Decomp$B_hat[Decomp$Ano == 2019] * Decomp$RMM.Ibge[Decomp$Ano == 2019] / 100000
+# 
+# # D2_hat = CBR declined but MMR did not
+# Decomp$D2_hat[Decomp$Ano == 2019] <- Decomp$B[Decomp$Ano == 2019] * Decomp$RMM.Ibge[Decomp$Ano == 2009] / 100000
+# 
+# # D = Both CBR and MMR declined
+# Decomp$D[Decomp$Ano == 2019] <- Decomp$B[Decomp$Ano == 2019] * Decomp$RMM.Ibge[Decomp$Ano == 2019] / 100000
+# 
+# 
+# # Y = Total effect of decline in MMR 
+# Decomp$Y <- Decomp$D1_hat - Decomp$D3_hat
+# 
+# # X = Total effect of fertility decline
+# Decomp$X <- Decomp$D1_hat - Decomp$D2_hat
+# 
+# # Z = Total effect of declines in both fertility and MMR
+# Decomp$Z <- Decomp$D1_hat - Decomp$D
+# 
+# Decomp <- Decomp %>%
+#   mutate(intersec.X.Y = X + Y - Z, # intersec.X.Y = Overlap between the effect of declines in fertility and in MMR
+#          Alpha = Y - intersec.X.Y, # Alpha = Net effect of decline in MMR
+#          Beta = X - intersec.X.Y, # Beta = Net effect of fertility decline
+#          Gama = (Alpha / Z) * 100, # Gama = Effect of safe motherhood on the % of the  potential number of maternal lives saved in 2019
+#          Delta = (Beta / Z) * 100, # Delta = Effect of decrease in live births on the % of the  potential number of maternal lives saved in 2019
+#          Omega = (intersec.X.Y / Z) * 100) # Omega = Effect of fertility reduction realized through its effect on MMR reduction
+# 
+# ##----------------------------------------------------------------------------------------------------------
+# 
+# ### Estimation of the decline in maternal mortality ratio and number of actual maternal deaths attributable to fertility decline ###
+# 
+# Decomp <- Decomp %>%
+#   mutate(RMM_hat = NA,
+#          D.09 = NA,
+#          D.19 = NA, 
+#          D_hat.19 = NA,
+#          Iota = NA,
+#          Kappa = NA,
+#          Lambda = NA,
+#          Iota.per = NA,
+#          Kappa.per = NA,
+#          Lambda.per = NA,
+#          Sigma = NA,
+#          Tau = NA,
+#          Eta = NA,
+#          Sigma.per = NA,
+#          Tau.per = NA,
+#          Eta.per = NA)
+# 
+# # RMM_hat = MMR in 2019 implied by fertility reduction observed during 2009-2019
+# Decomp$RMM_hat[Decomp$Ano == 2019] <- Decomp$RMM.Ibge[Decomp$Ano == 2019] + 
+#                                              ((Decomp$B[Decomp$Ano == 2019] / Decomp$B_hat[Decomp$Ano == 2019]) *
+#                                                 (Decomp$RMM.Ibge[Decomp$Ano == 2009] - Decomp$RMM.Ibge[Decomp$Ano == 2019]))
+#                                                                       
+# # D.09 = Maternal deaths in 2009
+# Decomp$D.09[Decomp$Ano == 2019] <- (Decomp$Nascimentos[Decomp$Ano == 2009] * Decomp$RMM.Ibge[Decomp$Ano == 2009]) / 100000
+# 
+# # D.19 = Maternal deaths in 2019
+# Decomp$D.19[Decomp$Ano == 2019] <- (Decomp$Nascimentos[Decomp$Ano == 2019] * Decomp$RMM.Ibge[Decomp$Ano == 2019]) / 100000
+# 
+# # D_hat.19 = Maternal deaths in 2019 implied by fertility decline observed between 2009 and 2019
+# Decomp$D_hat.19[Decomp$Ano == 2019] <- (Decomp$Nascimentos[Decomp$Ano == 2019] *  Decomp$RMM_hat[Decomp$Ano == 2019]) / 100000
+# 
+# 
+# # Iota = Total decline in MMR between 2009 and 2019
+# Decomp$Iota[Decomp$Ano == 2019] <- Decomp$RMM.Ibge[Decomp$Ano == 2009] - Decomp$RMM.Ibge[Decomp$Ano == 2019]
+# Decomp$Iota.per[Decomp$Ano == 2019] <- 100 #(in %)
+# 
+# # Kappa = Decline in MMR attributable to fertility reduction
+# Decomp$Kappa[Decomp$Ano == 2019] <- Decomp$RMM.Ibge[Decomp$Ano == 2009] - Decomp$RMM_hat[Decomp$Ano == 2019]
+# Decomp$Kappa.per[Decomp$Ano == 2019] <- (Decomp$Kappa[Decomp$Ano == 2019] * 100) / Decomp$Iota[Decomp$Ano == 2019] #(in %)
+# 
+# # Lambda = Decline in MMR attributable to safe motherhood initiatives
+# Decomp$Lambda[Decomp$Ano == 2019] <- Decomp$RMM_hat[Decomp$Ano == 2019] - Decomp$RMM.Ibge[Decomp$Ano == 2019]
+# Decomp$Lambda.per[Decomp$Ano == 2019] <- (Decomp$Lambda[Decomp$Ano == 2019] * 100) / Decomp$Iota[Decomp$Ano == 2019] #(in %)
+# 
+# 
+# # Sigma = Total decline in actual maternal deaths between 2009 and 2019
+# Decomp$Sigma[Decomp$Ano == 2019] <- Decomp$D.09[Decomp$Ano == 2019] - Decomp$D.19[Decomp$Ano == 2019] 
+# Decomp$Sigma.per[Decomp$Ano == 2019] <- 100 #(in %)
+#   
+# # Tau = Attributable to fertility decline
+# Decomp$Tau[Decomp$Ano == 2019] <-  Decomp$D.09[Decomp$Ano == 2019] - Decomp$D_hat.19[Decomp$Ano == 2019]
+# Decomp$Tau.per[Decomp$Ano == 2019] <- (Decomp$Tau[Decomp$Ano == 2019] * 100) / Decomp$Sigma[Decomp$Ano == 2019] #(in %)
+# 
+# # Eta = Attributable to safe motherhood
+# Decomp$Eta[Decomp$Ano == 2019] <- Decomp$D_hat.19[Decomp$Ano == 2019] - Decomp$D.19[Decomp$Ano == 2019]
+# Decomp$Eta.per[Decomp$Ano == 2019] <- (Decomp$Eta[Decomp$Ano == 2019] * 100) / Decomp$Sigma[Decomp$Ano == 2019] #(in %)
+# 
+# Decomp <- Decomp %>%
+#   mutate(across(22:48, round, 3))
 
 
 ################################
@@ -540,15 +542,15 @@ Decomp.com <- Decomp.com %>%
     #      norm.Kappa = rescale(Kappa), 
     #      norm.Lambda = rescale(Lambda), 
          norm.Iota.per = 1,
-         norm.Kappa.per = scales::rescale(Kappa.per, to = c(0, 1)), 
-         norm.Lambda.per = scales::rescale(Lambda.per, to = c(0, 1)), 
+         norm.Kappa.per = round(scales::rescale(Kappa.per, to = c(0, 1)), 3), 
+         norm.Lambda.per = round(scales::rescale(Lambda.per, to = c(0, 1)), 3), 
          # norm.Sigma = scales::rescale(Sigma), 
          # norm.Tau = scales::rescale(Tau), 
          # norm.Eta = scales::rescale(Eta),
          norm.Sigma.per = 1,
-         norm.Tau.per = scales::rescale(Tau.per), 
-         norm.Eta.per = scales::rescale(Eta.per)
-         ) 
+         norm.Tau.per = round(scales::rescale(Tau.per), 3), 
+         norm.Eta.per = round(scales::rescale(Eta.per), 3)
+         )
 
 # Testando uma escala de -1 a 1, mas nao deu certo
 # Decomp.com %>% 
@@ -835,7 +837,7 @@ tab.sem.norm %>%
 
 ##----------------------------------------------------------------------------------------------------------
 
-## TESTE ##
+## GRAFICO BR ##
 Decomp.com %>%
   select(sigla, Estado, UF, region, norm.Kappa.per, 
          norm.Lambda.per, norm.Eta.per, norm.Tau.per) %>%
@@ -879,3 +881,146 @@ Decomp.com %>%
                                           size = 3), color = 'black')+
   geom_text(label = 'Brasil', aes(x = -1.2, y = 29.0, angle = 90, hjust = 'center', 
                                   size = 3), color = 'black')
+
+
+##----------------------------------------------------------------------------------------------------------
+
+## MAPA ##
+
+mapa <- Decomp.com %>%
+  mutate(norm.Lambda.g.per = norm.Lambda.per * (-1),
+         diff = norm.Lambda.g.per + norm.Kappa.per,
+         categ = ifelse(diff > 0,
+                        "Fertility",
+                        "Safe Motherhood")) %>%
+  select(Ano, UF, Estado, sigla, region, RMM.Ibge, norm.Kappa.per, norm.Lambda.per, norm.Lambda.g.per, diff, categ)
+
+
+map_total <- get_brmap("State") %>% 
+  left_join(mapa, c("State" = "Estado"))
+
+
+map_total %>%
+  filter(sigla != "BR") %>%
+  ggplot() +
+  geom_sf(aes(fill = categ), colour = "black", size = 0.2) + ## MAPA COM A CONTAGEM DE MEMBROS DO FOCOBONDE
+  scale_fill_manual(values = c("#9DB6FB","#EB4783")) +
+  labs(title = "Main reason of the decline in MMR \n between 2009 and 2019 among Brazilian states",
+       caption = "Source: IBGE - SINASC 2009-2019, MMR 2009-2018 e Population Projections \n 
+       Jain, A. K. (2011). Measuring the Effect of Fertility Decline on the Maternal Mortality Ratio. Studies in Fam. Plan., 42(4)",
+       fill = guide_legend(title = "Reason")) +
+  theme(panel.grid = element_line(colour = "transparent"), ## TIRA O SISTEMA CARTESIANO 
+        panel.background = element_blank(),
+        plot.caption = element_text(size = 15),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        plot.title = element_text(color = "black", size = 24, hjust = 0.5), ## CENTRALIZA O TITULO
+        plot.title.position = "plot",
+        plot.caption.position = "plot",
+        legend.title = element_text(size = 18, face = "bold"),
+        legend.text = element_text(size = 18))  + 
+  geom_sf_label(aes(label = sigla), fill = "transparent", label.size = NA, size = 4, 
+                color = "black", fontface = "bold") + ## NOMES DAS UFs
+  annotation_scale(unit_category = "metric", location = "bl", width_hint = 0.15) + ## ESCALA
+  annotation_north_arrow(location = "bl", which_north = "true", pad_x = unit(0.5, "in"), pad_y = unit(0.3, "in"),
+                         style = north_arrow_fancy_orienteering) ## INDICADOR DO NORTE
+
+##----------------------------------------------------------------------------------------------------------
+
+## MAPA RMM 2009 e 2019 ##
+
+map_rmm <- TFT.2000.2019 %>%
+  mutate(Estado = case_when(UF == "Rondônia" ~ 11,
+                          UF == "Acre" ~ 12,
+                          UF == "Amazonas" ~ 13,
+                          UF == "Roraima" ~ 14,
+                          UF == "Pará" ~ 15,
+                          UF == "Amapá" ~ 16,
+                          UF == "Tocantins" ~ 17,
+                          UF == "Maranhão" ~ 21,
+                          UF == "Piauí" ~ 22,
+                          UF == "Ceará" ~ 23,
+                          UF == "Rio Grande do Norte" ~ 24,
+                          UF == "Paraíba" ~ 25,
+                          UF == "Pernambuco" ~ 26,
+                          UF == "Alagoas" ~ 27,
+                          UF == "Sergipe" ~ 28,
+                          UF == "Bahia" ~ 29,
+                          UF == "Minas Gerais" ~ 31,
+                          UF == "Espírito Santo" ~ 32,
+                          UF == "Rio de Janeiro" ~ 33,
+                          UF == "São Paulo" ~ 35,
+                          UF == "Paraná" ~ 41 ,
+                          UF == "Santa Catarina" ~ 42,
+                          UF == "Rio Grande do Sul" ~ 43,
+                          UF == "Mato Grosso do Sul" ~ 50,
+                          UF == "Mato Grosso" ~ 51,
+                          UF == "Goiás" ~ 52,
+                          UF == "Distrito Federal" ~ 53,
+                          UF == "Brasil" ~ 99)) %>%
+  select(Ano, UF, Estado, sigla, region, RMM.Ibge)
+  
+
+map_rmm <- get_brmap("State") %>% 
+  left_join(map_rmm, c("State" = "Estado"))
+
+
+color.plas <- viridis(48, alpha = 1, begin = 0, end = 1, option = "C",  direction = -1)
+
+map_rmm %>%
+  filter(Ano == 2009,
+         sigla != "BR") %>% 
+  ggplot() +
+  geom_sf(aes(fill = RMM.Ibge), colour = "black", size = 0.2,
+          na.rm = FALSE) + ## MAPA COM A CONTAGEM DE MEMBROS DO FOCOBONDE
+  scale_fill_gradientn(colours = color.plas, n.breaks = 6) +
+  labs(title = "Brazilian States' Maternal Mortality Rate - 2009", ## TITULO
+       caption = "Source: IBGE - SINASC 2009-2019, MMR 2009-2018 e Population Projections",
+       fill = guide_legend(title = "MMR")) + ## TITULO LEGENDA
+  theme(panel.grid = element_line(colour = "transparent"), ## TIRA O SISTEMA CARTESIANO 
+        panel.background = element_blank(),
+        plot.caption = element_text(size = 13),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        plot.title = element_text(color = "black", size = 25, hjust = 0.5), ## CENTRALIZA O TITULO
+        plot.title.position = "plot",
+        plot.caption.position = "plot",
+        legend.title = element_text(size = 16, face = "bold"),
+        legend.text = element_text(size = 15))  + 
+  geom_sf_label(aes(label = sigla), fill = "transparent", label.size = NA, size = 4, 
+                color = "black", fontface = "bold") + ## NOMES DAS UFs
+  annotation_scale(unit_category = "metric", location = "bl", width_hint = 0.15) + ## ESCALA
+  annotation_north_arrow(location = "bl", which_north = "true", pad_x = unit(0.5, "in"), pad_y = unit(0.3, "in"),
+                         style = north_arrow_fancy_orienteering) ## INDICADOR DO NORTE
+
+map_rmm %>%
+  filter(Ano == 2019,
+         sigla != "BR") %>%
+  ggplot() +
+  geom_sf(aes(fill = RMM.Ibge), colour = "black", size = 0.2,
+          na.rm = FALSE) + ## MAPA COM A CONTAGEM DE MEMBROS DO FOCOBONDE
+  scale_fill_gradientn(colours = color.plas, limits = c(30, 120), n.breaks = 6) +
+  labs(title = "Brazilian States' Maternal Mortality Rate - 2019", ## TITULO
+       caption = "Source: IBGE - SINASC 2009-2019, MMR 2009-2018 e Population Projections",
+       fill = guide_legend(title = "MMR")) + ## TITULO LEGENDA
+  theme(panel.grid = element_line(colour = "transparent"), ## TIRA O SISTEMA CARTESIANO 
+        panel.background = element_blank(),
+        plot.caption = element_text(size = 13),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        plot.title = element_text(color = "black", size = 25, hjust = 0.5), ## CENTRALIZA O TITULO
+        plot.title.position = "plot",
+        plot.caption.position = "plot",
+        legend.title = element_text(size = 16, face = "bold"),
+        legend.text = element_text(size = 15))  + 
+  geom_sf_label(aes(label = sigla), fill = "transparent", label.size = NA, size = 4, 
+                color = "black", fontface = "bold") + ## NOMES DAS UFs
+  annotation_scale(unit_category = "metric", location = "bl", width_hint = 0.15) + ## ESCALA
+  annotation_north_arrow(location = "bl", which_north = "true", pad_x = unit(0.5, "in"), pad_y = unit(0.3, "in"),
+                         style = north_arrow_fancy_orienteering) ## INDICADOR DO NORTE
