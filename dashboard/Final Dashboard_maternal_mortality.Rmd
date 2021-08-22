@@ -13,12 +13,13 @@ output:
 
 # O include=FALSE serve para indicar que vamos rodar esse pedaço do codigo
 # mas nem o código nem a saída são exibidos no arquivo.
+setwd("C:/Users/Rafaella/Documents/R/Bernardo/Mortalidade Materna/maternal-mortality/dashboard")
 
 options(scipen = 9999)
 
 ## Pacotes
-.packages = c("foreign", "plotly", "scales", "ggplot2", "tidyr", "gt", "brazilmaps", "fertestr",
-              "colorspace", "ggspatial", "RColorBrewer", "maptools", "viridis", "dplyr", "flexdashboard")
+.packages = c("sf", "DT", "plotly", "scales", "janitor", "ggplot2", "tidyr", "data.table", "gt", "brazilmaps",
+              "colorspace", "ggspatial", "RColorBrewer", "maptools", "viridis", "dplyr", "flexdashboard", "fertestr")
 
 # Load packages into session
 lapply(.packages, require, character.only = T)

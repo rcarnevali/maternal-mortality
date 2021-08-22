@@ -4,84 +4,40 @@ author: "Grupo de Pesquisa sobre Mortalidade Materna"
 runtime: shiny
 output: 
   flexdashboard::flex_dashboard:
-    orientation: columns  # ou rows
-    vertical_layout: fill  # ou scroll
-    #css: styles.css
+    orientation: columns  
+    vertical_layout: fill
+    source_code: embed  
+
 ---
 
 ```{r setup, include = FALSE}
 
-# O include=FALSE serve para indicar que vamos rodar esse pedaço do codigo
-# mas nem o código nem a saída são exibidos no arquivo.
-setwd("C:/Users/Rafaella/Documents/R/Bernardo/Mortalidade Materna/maternal-mortality/dashboard")
-
 options(scipen = 9999)
+options(encoding = "UTF-8")
 
 ## Pacotes
-.packages = c("sf", "DT", "plotly", "scales", "janitor", "ggplot2", "tidyr", "data.table", "gt", "brazilmaps",
-              "colorspace", "ggspatial", "RColorBrewer", "maptools", "viridis", "dplyr", "flexdashboard", "fertestr")
+library(flexdashboard)
+library(rmarkdown)
+library(tidyverse)
+library(ggspatial)
+library(maptools)
+library(plotly)
+library(gt)
+library(brazilmaps)
+library(colorspace)
+library(viridis)
 
-# Load packages into session
-lapply(.packages, require, character.only = T)
+# Decomp.com <- read_csv("decomp.csv")
+# description <- read_csv("description.csv")
+# TFT.2000.2019 <- read_csv("TFT.2000.2019.csv")
 
-# library(fertestr)
-
-#source("Funcoes.r")
-
-load("dashboard/dashboard env.RData")
-
-# description <- read.csv('description decomp - func.csv', dec = ",", header = TRUE, stringsAsFactors = FALSE, sep = ';')
-
-# unitfed <- c("BR","RO","AC","AM","RR","PA","AP","TO","MA","PI","CE","RN","PB","PE","AL","SE",
-#            "BA","MG","ES","RJ","SP","PR","SC","RS","MS","MT","GO","DF")
-
-tab.com.norm <- Decomp.com %>%
-  select(sigla, RMM.Ibge, TBN, r, P_hat, B_hat, B, D1_hat, D2_hat, 
-         D3_hat, D, X, Y, Z, intersec.X.Y, Alpha, Beta, Gama, Delta, Omega, RMM_hat, 
-         D.ano1, D.ano2, D_hat.ano2, norm.Iota.per, norm.Kappa.per, 
-         norm.Lambda.per, norm.Sigma.per, norm.Tau.per, norm.Eta.per) %>%
-  rename(RMM = RMM.Ibge,
-         Iota.per = norm.Iota.per, 
-         Kappa.per = norm.Kappa.per, 
-         Lambda.per = norm.Lambda.per, 
-         Sigma.per = norm.Sigma.per, 
-         Tau.per = norm.Tau.per, 
-         Eta.per = norm.Eta.per) %>%
-  pivot_longer(-sigla) %>% 
-  pivot_wider(names_from = sigla, values_from = value) %>%
-  left_join(description, by = "name") %>% 
-  ungroup() %>%
-  select(name, description, all_of(unitfed))
-
-
-mapa <- Decomp.com %>% 
-              filter(sigla != "BR") %>% 
-              select(Estado, sigla, RMM.Ibge, norm.Kappa.per, norm.Lambda.per) %>% 
-  mutate(categ = ifelse((norm.Lambda.per * (-1)) + norm.Kappa.per > 0,
-                        "Fecundidade",
-                        "Maternidade Segura")) %>%
-  rename(RMM = RMM.Ibge,
-         Kappa.per = norm.Kappa.per, 
-         Lambda.per = norm.Lambda.per,
-         Causa = categ) %>%
-  mutate_if(is.numeric, as.character, is.factor, as.character) %>%
-  pivot_longer(!c(Estado, sigla), names_to = "variavel", values_to = "decomp",
-               values_transform = list(decomp = as.character)) %>%
-  mutate(Estado = as.double(Estado)) 
-
-
-mapa2 <- TFT.2000.2019 %>%
-              filter(Ano >= 2009, sigla != "BR") %>%
-              select(Ano, Estado, sigla, TFT, RMM.Ibge) %>%
-  rename(RMM = RMM.Ibge) %>%
-  mutate_if(is.numeric, as.character, is.factor, as.character) %>%
-  pivot_longer(!c(Ano, Estado, sigla), names_to = "variavel", values_to = "estim",
-               values_transform = list(decomp = as.character), values_drop_na = TRUE)%>%
-  mutate(Estado = as.double(Estado))
- 
-
+tab.com.norm <- read_csv("tabela.csv")
+mapa <- read_csv("mapa.csv")
+mapa2 <- read_csv("mapa2.csv")
+grafico <- read_csv("grafico.csv")
 brasil <- brazilmaps::get_brmap("State")
-
+unitfed <- c("BR","RO","AC","AM","RR","PA","AP","TO","MA","PI","CE","RN","PB","PE",
+             "AL", "SE", "BA","MG","ES","RJ","SP","PR","SC","RS","MS","MT","GO","DF")
 
 ```
 
@@ -121,13 +77,6 @@ conditionalPanel(
                          multiple = F))
 )
 
-     # dplyr::filter(name == "Iota.per" | name == "Kappa.per" | name == "Lambda.per") %>% 
-     # mutate(escolha = factor(name, levels = name, labels = order(description))) %>%
-     # select(escolha)
-
-# description %>% 
-#      dplyr::filter(name == "Iota.per" | name == "Kappa.per" | name == "Lambda.per") %>% 
-#      select(description)
 ```
 
 
@@ -162,28 +111,11 @@ graph <- reactive ({
             plot.caption.position = "plot",
             legend.title = element_text(size = 18, face = "bold"),
             legend.text = element_text(size = 18)) +
-      geom_sf_label(aes(label = sigla), label.size = NA, size = 4,
-                    color = "black", fontface = "bold") + ## NOMES DAS UFs
+      geom_sf_label(aes(label = sigla), label.size = NA, size = 3.1, label.padding = unit(0.06, "lines"),
+                    color = "black", fontface = "bold", show.legend = FALSE) + ## NOMES DAS UFs
       annotation_scale(unit_category = "metric", location = "bl", width_hint = 0.15) + ## ESCALA
       annotation_north_arrow(location = "bl", which_north = "true", pad_x = unit(0.5, "in"), pad_y = unit(0.3, "in"),
                              style = north_arrow_fancy_orienteering) ## INDICADOR DO NORTE
-      # theme(panel.grid = element_line(colour = "transparent"), ## TIRA O SISTEMA CARTESIANO
-      #       panel.background = element_blank(),
-      #       plot.caption = element_text(size = 15),
-      #       axis.title.x = element_blank(),
-      #       axis.title.y = element_blank(),
-      #       axis.text = element_blank(),
-      #       axis.ticks = element_blank(),
-      #       plot.title = element_text(color = "black", size = 24, hjust = 0.5), ## CENTRALIZA O TITULO
-      #       plot.title.position = "plot",
-      #       plot.caption.position = "plot",
-      #       legend.title = element_text(size = 18, face = "bold"),
-      #       legend.text = element_text(size = 18))  +
-      # geom_sf_label(aes(label = sigla), fill = "transparent", label.size = NA, size = 4,
-      #               color = "black", fontface = "bold") + ## NOMES DAS UFs
-      # annotation_scale(unit_category = "metric", location = "bl", width_hint = 0.15) + ## ESCALA
-      # annotation_north_arrow(location = "bl", which_north = "true", pad_x = unit(0.5, "in"), pad_y = unit(0.3, "in"),
-      #                        style = north_arrow_fancy_orienteering) ## INDICADOR DO NORTE
     
   } else if (input$select == "TFT") {
     
@@ -206,8 +138,8 @@ graph <- reactive ({
             plot.caption.position = "plot",
             legend.title = element_text(size = 18, face = "bold"),
             legend.text = element_text(size = 18)) +
-      geom_sf_label(aes(label = sigla), label.size = NA, size = 4,
-                    color = "black", fontface = "bold") + ## NOMES DAS UFs
+      geom_sf_label(aes(label = sigla), label.size = NA, size = 3.1, label.padding = unit(0.06, "lines"),
+                    color = "black", fontface = "bold", show.legend = FALSE) + ## NOMES DAS UFs
       annotation_scale(unit_category = "metric", location = "bl", width_hint = 0.15) + ## ESCALA
       annotation_north_arrow(location = "bl", which_north = "true", pad_x = unit(0.5, "in"), pad_y = unit(0.3, "in"),
                              style = north_arrow_fancy_orienteering) ## INDICADOR DO NORTE
@@ -219,7 +151,7 @@ graph <- reactive ({
       ggplot(aes(fill = decomp), colour = "black", size = 0.2) + 
       geom_sf() +
       scale_fill_manual(values = c("#9DB6FB","#EB4783"))+
-      labs(title = "Principal causa da mudança na RMM \n entre 2009 e 2019 entre os estados brasileiros",
+      labs(title = "Principal causa da mudança na RMM entre 2009 e 2019 entre os estados brasileiros",
            caption = "Fonte: IBGE - SINASC 2009-2019, RMM 2009-2018 e Projeções de População",
            fill = guide_legend(title = "Principal Causa")) +
       theme_minimal() + 
@@ -231,8 +163,8 @@ graph <- reactive ({
             plot.caption.position = "plot",
             legend.title = element_text(size = 18, face = "bold"),
             legend.text = element_text(size = 18)) +
-      geom_sf_label(aes(label = sigla), label.size = NA, size = 4,
-                    color = "black", fontface = "bold") + ## NOMES DAS UFs
+      geom_sf_label(aes(label = sigla), label.size = NA, size = 3.1, label.padding = unit(0.06, "lines"),
+                    color = "black", fontface = "bold", show.legend = FALSE) + ## NOMES DAS UFs
       annotation_scale(unit_category = "metric", location = "bl", width_hint = 0.15) + ## ESCALA
       annotation_north_arrow(location = "bl", which_north = "true", pad_x = unit(0.5, "in"), pad_y = unit(0.3, "in"),
                              style = north_arrow_fancy_orienteering) ## INDICADOR DO NORTE
@@ -258,8 +190,8 @@ graph <- reactive ({
             plot.caption.position = "plot",
             legend.title = element_text(size = 18, face = "bold"),
             legend.text = element_text(size = 18)) +
-      geom_sf_label(aes(label = sigla), label.size = NA, size = 4,
-                    color = "black", fontface = "bold") + ## NOMES DAS UFs
+      geom_sf_label(aes(label = sigla), label.size = NA, size = 3.1, label.padding = unit(0.06, "lines"),
+                    color = "black", fontface = "bold", show.legend = FALSE) + ## NOMES DAS UFs
       annotation_scale(unit_category = "metric", location = "bl", width_hint = 0.15) + ## ESCALA
       annotation_north_arrow(location = "bl", which_north = "true", pad_x = unit(0.5, "in"), pad_y = unit(0.3, "in"),
                              style = north_arrow_fancy_orienteering) ## INDICADOR DO NORTE
@@ -285,8 +217,8 @@ graph <- reactive ({
             plot.caption.position = "plot",
             legend.title = element_text(size = 18, face = "bold"),
             legend.text = element_text(size = 18)) +
-      geom_sf_label(aes(label = sigla), label.size = NA, size = 4,
-                    color = "black", fontface = "bold") + ## NOMES DAS UFs
+      geom_sf_label(aes(label = sigla), label.size = NA, size = 3.1, label.padding = unit(0.06, "lines"),
+                    color = "black", fontface = "bold", show.legend = FALSE) + ## NOMES DAS UFs
       annotation_scale(unit_category = "metric", location = "bl", width_hint = 0.15) + ## ESCALA
       annotation_north_arrow(location = "bl", which_north = "true", pad_x = unit(0.5, "in"), pad_y = unit(0.3, "in"),
                              style = north_arrow_fancy_orienteering) ## INDICADOR DO NORTE
@@ -312,22 +244,9 @@ Column
 
 ```{r, message=FALSE, warning=FALSE}
 
-# data-icon="fa-bullseye"
-# data-icon="fa-sliders"
-# data-icon="fa-clipboard"
-# data-icon="fa-paperclip"
-# data-icon="fa-table-list"
-
 renderPlotly({
   
-  grafico = Decomp.com %>%
-  select(sigla, Estado, UF, region, norm.Kappa.per, 
-         norm.Lambda.per, norm.Eta.per, norm.Tau.per) %>%
-  arrange(Estado) %>%
-  mutate(norm.Lambda.g.per = norm.Lambda.per * (-1), 
-         index = rep(seq(1, 28))) %>%
-  rename(Fecundidade = norm.Kappa.per, 
-         Maternidade = norm.Lambda.g.per) %>%
+  grafico = grafico %>%
   ggplot(aes(x = Fecundidade, y = index, group = Estado, color = region)) +
   geom_point(size = 6.5, alpha = 0.70) +
   geom_point(aes(x = Maternidade, y = index), shape = 16, size = 6.5, alpha = 0.80) +
@@ -343,7 +262,7 @@ renderPlotly({
   theme_bw() +
   scale_y_continuous(breaks = NULL, limits = c(0.5, 32.0)) +
   scale_x_continuous(breaks = seq(-1, 1, by = 0.1), labels = seq(-1, 1, by = 0.1)  %>% abs) + 
-  geom_text(label = 'Atribuível a mudanças na \nMaternidade Segura', aes(x = -0.6, y = 31.5, vjust = 'center',
+  geom_text(label = 'Atribuivel a mudanças na \nMaternidade Segura', aes(x = -0.6, y = 31.5, vjust = 'center',
                                  size = 3), color = 'black') +
   geom_text(label = 'Atribuível a mudanças \nna Fecundidade', aes(x = 0.6, y = 31.5, vjust = 'center',
                                     size = 3), color = 'black') +
@@ -370,7 +289,7 @@ ggplotly(grafico)
 
 ```
 
-# Tabelas {data-table=row data-icon="fa-list" data-navmenu="Analises"}
+# Tabela Resumo {data-table=row data-icon="fa-list" data-navmenu="Analises"}
 
 ### Tabela da base de Dados
 
@@ -406,10 +325,4 @@ div(style = 'overflow: scroll',
   cols_align(align = "center", columns = all_of(unitfed))
 )
 
-
-
-# renderDataTable({
-#      DT::datatable(iris %>%  filter(str_detect(species, ifelse(input$species == 'todas',"",input$species))), options = list(lengthMenu = c(5, 10, 25), pageLength = 10))
-
-# })
 ```
