@@ -594,18 +594,14 @@ rm(datalist, dat)
 ## 5) Normalizando os resultados(2009-2019) - SEM AJUSTES ##
 
 Decomp.sem <- Decomp.sem %>% 
-  mutate(norm.Iota = rescale(Iota), 
-         norm.Kappa = rescale(Kappa), 
-         norm.Lambda = rescale(Lambda), 
-         norm.Iota.per = 1,
-         norm.Kappa.per = scales::rescale(Kappa.per, to = c(0, 1)), 
-         norm.Lambda.per = scales::rescale(Lambda.per, to = c(0, 1)), 
-         norm.Sigma = scales::rescale(Sigma), 
-         norm.Tau = scales::rescale(Tau), 
-         norm.Eta = scales::rescale(Eta),
-         norm.Sigma.per = 1,
-         norm.Tau.per = scales::rescale(Tau.per), 
-         norm.Eta.per = scales::rescale(Eta.per)) 
+  mutate(
+    norm.Iota.per = 1,
+    norm.Kappa.per = round(scales::rescale(Kappa.per, to = c(0, 1)), 3), 
+    norm.Lambda.per = round(scales::rescale(Lambda.per, to = c(0, 1)), 3), 
+    norm.Sigma.per = 1,
+    norm.Tau.per = round(scales::rescale(Tau.per), 3), 
+    norm.Eta.per = round(scales::rescale(Eta.per), 3)
+  )
 
 
 ##----------------------------------------------------------------------------------------------------------
@@ -715,18 +711,12 @@ tab.sem %>%
 tab.com.norm <- Decomp.com %>%
   select(sigla, RMM.Ibge, TBN, r, P_hat, B_hat, B, D1_hat, D2_hat, 
          D3_hat, D, X, Y, Z, intersec.X.Y, Alpha, Beta, Gama, Delta, Omega, RMM_hat, 
-         D.ano1, D.ano2, D_hat.ano2, norm.Iota, norm.Kappa, norm.Lambda, norm.Iota.per, norm.Kappa.per, 
-         norm.Lambda.per, norm.Sigma, norm.Tau, norm.Eta, norm.Sigma.per, norm.Tau.per, norm.Eta.per) %>%
+         D.ano1, D.ano2, D_hat.ano2, norm.Iota.per, norm.Kappa.per, 
+         norm.Lambda.per, norm.Sigma.per, norm.Tau.per, norm.Eta.per) %>%
   rename(RMM = RMM.Ibge,
-         Iota = norm.Iota, 
-         Kappa = norm.Kappa, 
-         Lambda = norm.Lambda, 
          Iota.per = norm.Iota.per, 
          Kappa.per = norm.Kappa.per, 
          Lambda.per = norm.Lambda.per, 
-         Sigma = norm.Sigma, 
-         Tau = norm.Tau, 
-         Eta = norm.Eta, 
          Sigma.per = norm.Sigma.per, 
          Tau.per = norm.Tau.per, 
          Eta.per = norm.Eta.per) %>%
@@ -777,17 +767,11 @@ tab.com.norm %>%
 tab.sem.norm <- Decomp.sem %>%
   select(sigla, RMM, TBN, r, P_hat, B_hat, B, D1_hat, D2_hat, 
          D3_hat, D, X, Y, Z, intersec.X.Y, Alpha, Beta, Gama, Delta, Omega, RMM_hat, 
-         D.ano1, D.ano2, D_hat.ano2, norm.Iota, norm.Kappa, norm.Lambda, norm.Iota.per, norm.Kappa.per, 
-         norm.Lambda.per, norm.Sigma, norm.Tau, norm.Eta, norm.Sigma.per, norm.Tau.per, norm.Eta.per) %>%
-  rename(Iota = norm.Iota, 
-         Kappa = norm.Kappa, 
-         Lambda = norm.Lambda, 
-         Iota.per = norm.Iota.per, 
+         D.ano1, D.ano2, D_hat.ano2, norm.Iota.per, norm.Kappa.per, 
+         norm.Lambda.per, norm.Sigma.per, norm.Tau.per, norm.Eta.per) %>%
+  rename(Iota.per = norm.Iota.per, 
          Kappa.per = norm.Kappa.per, 
          Lambda.per = norm.Lambda.per, 
-         Sigma = norm.Sigma, 
-         Tau = norm.Tau, 
-         Eta = norm.Eta, 
          Sigma.per = norm.Sigma.per, 
          Tau.per = norm.Tau.per, 
          Eta.per = norm.Eta.per) %>%
@@ -818,7 +802,7 @@ tab.sem.norm <- Decomp.sem %>%
     locations = cells_body(columns = c(name, description), rows = 4:6))  %>%
   tab_footnote(
     footnote = "Normalizado",
-    locations = cells_body(columns = c(name, description), rows = 24:35)) %>%
+    locations = cells_body(columns = c(name, description), rows = 24:29)) %>%
   tab_style(
     style = cell_text(size = px(12)),
     locations = cells_body(columns = everything())) %>%
@@ -833,7 +817,15 @@ tab.sem.norm %>%
 
 ##----------------------------------------------------------------------------------------------------------
 
+## Comparando BR entre o ajuste do MS e a estimação direta ##
 
+comparacao <- tab.sem.norm %>%
+  select(name, description, BR) %>%
+  rename(BR.sem = BR) %>%
+  left_join(tab.com.norm %>%
+              select(name, description, BR), by = c("name", "description")) %>% 
+  rename(BR.com = BR) %>%
+  mutate(diff = BR.com - BR.sem)
 
 ##----------------------------------------------------------------------------------------------------------
 
@@ -854,32 +846,34 @@ Decomp.com %>%
   geom_hline(yintercept = c(7, 16, 20, 23, 27) + 0.50, lwd = 0.95, linetype = "dashed", col = 'grey') +
   geom_vline(xintercept = 0, lwd = 1, col = 'darkgrey') +
   geom_text(aes(x = norm.Lambda.g.per, y = index + 0.05, label = sigla), color = 'black', size = 3.5, fontface = 'bold') +
-  labs(title = "Proporção do total da mudança na RMM por UF - 2009-2019",
+  geom_text(aes(x = norm.Kappa.per, y = index - 0.05, label = sigla), color = 'black', size = 3.5, fontface = 'bold') +
+  labs(title = "Proportion of the change in the MMR among Brazilian states - 2009-2019",
        x = '',
        y = '',
-       caption = "Fonte: IBGE - SINASC 2009-2019, RMM 2009-2018 e Projeções de População \n Jain, A. K. (2011). Measuring the Effect of Fertility Decline on the Maternal Mortality Ratio. Studies in Family Planning, 42(4), 247–260") +
+       caption = "Source: IBGE - SINASC 2009-2019, MMR 2009-2018 e Population Projections \n 
+       Jain, A. K. (2011). Measuring the Effect of Fertility Decline on the Maternal Mortality Ratio. Studies in Fam. Plan., 42(4)")+
   guides(color = "none", size = "none") +
   theme_bw() +
   scale_y_continuous(breaks = NULL, limits = c(0.5, 32.0)) +
   scale_x_continuous(breaks = seq(-1, 1, by = 0.1), labels = seq(-1, 1, by = 0.1)  %>% abs) + 
-  geom_text(label = 'Atribuível a mudanças na \nMaternidade Segura', aes(x = -0.6, y = 31.5, vjust = 'center',
-                                 size = 3), color = 'black') +
-  geom_text(label = 'Atribuível a mudanças \nna Fecundidade', aes(x = 0.6, y = 31.5, vjust = 'center',
-                                    size = 3), color = 'black') +
+  geom_text(label = 'Attributable to Safe \nMotherhood Initiatives', aes(x = -0.6, y = 31.5, vjust = 'center',
+                                                                         size = 3), color = 'black') +
+  geom_text(label = 'Attributable to changes \nin Fertility', aes(x = 0.6, y = 31.5, vjust = 'center',
+                                                                  size = 3), color = 'black') +
   theme(panel.grid.minor = element_blank(),
         plot.title = element_text(color = "grey20", size = 15, hjust = 0.5, face = "bold"),
         axis.text.x = element_text(size = 11)) +
-  geom_text(label = 'Norte', aes(x = -1.2, y = 3.0, angle = 90, hjust = 'center', 
+  geom_text(label = 'North', aes(x = -1.2, y = 3.0, angle = 90, hjust = 'center', 
                                  size = 3), color = 'black') +
-  geom_text(label = 'Nordeste', aes(x = -1.2, y = 12.5, angle = 90, hjust = 'center', 
+  geom_text(label = 'Northeast', aes(x = -1.2, y = 12.5, angle = 90, hjust = 'center', 
                                     size = 3), color = 'black') +
-  geom_text(label = 'Sudeste', aes(x = -1.2, y = 18.5, angle = 90, hjust = 'center', 
+  geom_text(label = 'Southeast', aes(x = -1.2, y = 18.5, angle = 90, hjust = 'center', 
                                    size = 3), color = 'black') +
-  geom_text(label = 'Sul', aes(x = -1.2, y = 22.0, angle = 90, hjust = 'center', 
+  geom_text(label = 'South', aes(x = -1.2, y = 22.0, angle = 90, hjust = 'center', 
                                size = 3), color = 'black') +
-  geom_text(label = 'Centro-\nOeste', aes(x = -1.2, y = 25.3, angle = 90, hjust = 'center', 
+  geom_text(label = 'Center-\nWest', aes(x = -1.2, y = 25.3, angle = 90, hjust = 'center', 
                                           size = 3), color = 'black')+
-  geom_text(label = 'Brasil', aes(x = -1.2, y = 29.0, angle = 90, hjust = 'center', 
+  geom_text(label = 'Brazil', aes(x = -1.2, y = 29.0, angle = 90, hjust = 'center', 
                                   size = 3), color = 'black')
 
 
@@ -903,8 +897,7 @@ map_total <- get_brmap("State") %>%
 map_total %>%
   filter(sigla != "BR") %>%
   ggplot() +
-  geom_sf(aes(fill = categ), colour = "black", size = 0.2) + ## MAPA COM A CONTAGEM DE MEMBROS DO FOCOBONDE
-  scale_fill_manual(values = c("#9DB6FB","#EB4783")) +
+  geom_sf(aes(fill = categ), colour = "black", size = 0.2) + 
   labs(title = "Main reason of the decline in MMR \n between 2009 and 2019 among Brazilian states",
        caption = "Source: IBGE - SINASC 2009-2019, MMR 2009-2018 e Population Projections \n 
        Jain, A. K. (2011). Measuring the Effect of Fertility Decline on the Maternal Mortality Ratio. Studies in Fam. Plan., 42(4)",
@@ -974,9 +967,9 @@ map_rmm %>%
          sigla != "BR") %>% 
   ggplot() +
   geom_sf(aes(fill = RMM.Ibge), colour = "black", size = 0.2,
-          na.rm = FALSE) + ## MAPA COM A CONTAGEM DE MEMBROS DO FOCOBONDE
+          na.rm = FALSE) + 
   scale_fill_gradientn(colours = color.plas, n.breaks = 6) +
-  labs(title = "Brazilian States' Maternal Mortality Rate - 2009", ## TITULO
+  labs(title = "Brazilian States' Maternal Mortality Ratio - 2009", ## TITULO
        caption = "Source: IBGE - SINASC 2009-2019, MMR 2009-2018 e Population Projections",
        fill = guide_legend(title = "MMR")) + ## TITULO LEGENDA
   theme(panel.grid = element_line(colour = "transparent"), ## TIRA O SISTEMA CARTESIANO 
@@ -1002,9 +995,9 @@ map_rmm %>%
          sigla != "BR") %>%
   ggplot() +
   geom_sf(aes(fill = RMM.Ibge), colour = "black", size = 0.2,
-          na.rm = FALSE) + ## MAPA COM A CONTAGEM DE MEMBROS DO FOCOBONDE
+          na.rm = FALSE) + 
   scale_fill_gradientn(colours = color.plas, limits = c(30, 120), n.breaks = 6) +
-  labs(title = "Brazilian States' Maternal Mortality Rate - 2019", ## TITULO
+  labs(title = "Brazilian States' Maternal Mortality Ratio - 2019", ## TITULO
        caption = "Source: IBGE - SINASC 2009-2019, MMR 2009-2018 e Population Projections",
        fill = guide_legend(title = "MMR")) + ## TITULO LEGENDA
   theme(panel.grid = element_line(colour = "transparent"), ## TIRA O SISTEMA CARTESIANO 
